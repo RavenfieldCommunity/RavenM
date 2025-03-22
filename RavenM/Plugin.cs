@@ -70,9 +70,18 @@ namespace RavenM
             }
         }
 
-        public static readonly int EXPECTED_BUILD_NUMBER = 29;
+        public static readonly int EXPECTED_BUILD_NUMBER = 31;
 
         private ConfigEntry<bool> configRavenMDevMod;
+        private bool showBuildGUID;
+
+        public static float chatWidth = 500f;
+        public static float chatHeight = 200f;
+        public static float chatYOffset = 370f;
+        public static float chatXOffset = 10f;
+        public static int chatFontSize = 0;
+        public static bool changeChatFontSize = false;  //If need to change the font size
+        
         private ConfigEntry<bool> configRavenMAddToBuiltInMutators;
         private ConfigEntry<string> configRavenMBuiltInMutatorsDirectory;
         private void Awake()
@@ -80,11 +89,11 @@ namespace RavenM
             instance = this;
             logger = Logger;
 
-            string[] commandLineArgs = Environment.GetCommandLineArgs();
+            string[] args = Environment.GetCommandLineArgs();
 
-            for (int i = 0; i < commandLineArgs.Length; i++)
+            for (int i = 0; i < args.Length; i++)
             {
-                if (commandLineArgs[i] == "-noravenm") 
+                if (args[i] == "-noravenm") 
                 { 
                     Logger.LogWarning($"Plugin {PluginInfo.PLUGIN_GUID} is canceled to load!");
                     throw new Exception("Cancel load");
@@ -106,7 +115,32 @@ namespace RavenM
                                                                 "Directory",
                                                                 "",
                                                                 "The mutators in the folder will be added automatically as Build In Mutators, this is for testing mutators without having to start the game with mods.");
-
+            showBuildGUID = Config.Bind("General.Toggles",
+                "Show GUID",
+                false,
+                "Show GUID on screen.").Value;
+            chatWidth = Config.Bind("General.ChatField",
+                "Chat Width",
+                500f,
+                "Chat field width.").Value;
+            chatHeight = Config.Bind("General.ChatField",
+                "Chat Height",
+                200f,
+                "Chat field height.").Value;
+            chatXOffset = Config.Bind("General.ChatField",
+                "Chat XOffset",
+                370f,
+                "Chat field x-axis position.").Value;
+            chatYOffset = Config.Bind("General.ChatField",
+                "Chat YOffset",
+                Screen.width - 310f,
+                "Chat field y-axis position.").Value;
+            chatFontSize = Config.Bind("General.ChatField",
+                "Chat Font Size",
+                0,
+                "Change the font size of chat field(0 is disable).").Value;
+            if (chatFontSize != 0)
+                changeChatFontSize = true;
             changeGUID = configRavenMDevMod.Value;
             addToBuiltInMutators = configRavenMAddToBuiltInMutators.Value;
             customBuildInMutators = configRavenMBuiltInMutatorsDirectory.Value;
@@ -126,7 +160,6 @@ namespace RavenM
                 Logger.LogError($"Failed to patch: {e}");
             }
             
-            string[] args = Environment.GetCommandLineArgs();
             foreach (var argument in args)
             {
                 if (argument.Contains("="))
@@ -144,7 +177,7 @@ namespace RavenM
         }
         private void OnGUI()
         {
-            GUI.Label(new Rect(10, Screen.height - 20, 400, 40), $"RavenM ID: {BuildGUID}");
+            if (showBuildGUID) GUI.Label(new Rect(10, Screen.height - 20, 400, 40), $"RavenM ID: {BuildGUID}");
 
             if (GameManager.instance != null && GameManager.instance.buildNumber != EXPECTED_BUILD_NUMBER) 
             {

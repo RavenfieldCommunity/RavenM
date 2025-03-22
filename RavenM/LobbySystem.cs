@@ -1335,11 +1335,11 @@ namespace RavenM
                 {
                     if (ChatManager.instance.SelectedChatPosition == 1) // Position to the right
                     {
-                        ChatManager.instance.CreateChatArea(true, 300f, 400f, 570f, Screen.width - 310f);
+                        ChatManager.instance.CreateChatArea(true, Plugin.chatWidth, Plugin.chatHeight, Plugin.chatYOffset,Plugin.chatXOffset);
                     }
                     else
                     {
-                        ChatManager.instance.CreateChatArea(true, 300f, 400f, 570f);
+                        ChatManager.instance.CreateChatArea(true, Plugin.chatWidth, Plugin.chatHeight, Plugin.chatYOffset,Plugin.chatXOffset);
                     }
                 }
 

@@ -798,7 +798,7 @@ namespace RavenM
             
             if (ChatManager.instance.SelectedChatPosition == 1) // Position to the right
             {
-                ChatManager.instance.CreateChatArea(false, 500f, 200f, 370f, Screen.width - 510f);
+                ChatManager.instance.CreateChatArea(false, Plugin.chatWidth, Plugin.chatHeight, Plugin.chatYOffset,Plugin.chatXOffset);
             }
             else
             {
@@ -2212,13 +2212,17 @@ namespace RavenM
                                             root.transform.rotation = destructiblePacket.Rotation;
                                         }
 
+                                        
                                         var destructibles = DestructiblePacket.GetDestructibles(root);
                                         for (int i = 0; i < destructibles.Length; i++)
                                         {
                                             var destructible = destructibles[i];
 
                                             if (!destructible.isDead && destructiblePacket.States[i])
-                                                destructible.Shatter();
+                                            {
+                                                destructible.Shatter(null);
+                                            }
+                                                
                                         }
                                     }
                                 }
@@ -2232,8 +2236,8 @@ namespace RavenM
 
                                     if (destructible == null || destructible.isDead)
                                         break;
-
-                                    destructible.Shatter();
+                                    //reflection only
+                                    try { Traverse.Create(destructible).Method("Die",new DamageInfo()).GetValue(); } finally {}
                                 }
                                 break;
                             case PacketType.ChatCommand:
