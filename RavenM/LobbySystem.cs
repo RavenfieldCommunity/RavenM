@@ -1478,23 +1478,21 @@ namespace RavenM
                 var members = GetLobbyMembers();
                 int len = members.Count;
 
+                GUI.BeginScrollView(new Rect(0,0,200,400),scrollPosition,new Rect (0,0,100,1));
+                var modList = SteamMatchmaking.GetLobbyData(ActualLobbyID, "mods");
+                var modCount = modList != string.Empty ? modList.Split(',').Length : 0;
+                var modSize = SteamMatchmaking.GetLobbyData(ActualLobbyID, "modtotalsize");
                 GUILayout.BeginHorizontal();
                 GUILayout.FlexibleSpace();
-                GUILayout.Label($"MEMBERS ({len}/{SteamMatchmaking.GetLobbyMemberLimit(ActualLobbyID)}):");
+                GUILayout.Label($"MODS: {modCount} | {modSize}");
                 GUILayout.FlexibleSpace();
                 GUILayout.EndHorizontal();
-
-                GUI.BeginScrollView(new Rect(0,0,200,400),scrollPosition,new Rect (0,0,100,1));
-                var modList = SteamMatchmaking.GetLobbyData(LobbyView, "mods");
-                var modCount = modList != string.Empty ? modList.Split(',').Length : 0;
-                var modSize = SteamMatchmaking.GetLobbyData(LobbyView, "modtotalsize");
-                GUILayout.Label($"MODS: {modCount} | {modSize}");
 
                 GUILayout.Space(10f);
 
                 GUILayout.BeginHorizontal();
                 GUILayout.FlexibleSpace();
-                GUILayout.Label("MEMBERS:");
+                GUILayout.Label($"MEMBERS ({len}/{SteamMatchmaking.GetLobbyMemberLimit(ActualLobbyID)}):");
                 GUILayout.FlexibleSpace();
                 GUILayout.EndHorizontal();
 
