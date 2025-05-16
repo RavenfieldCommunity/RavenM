@@ -45,6 +45,7 @@ namespace RavenM
         public static Plugin instance = null;
 
         public static BepInEx.Logging.ManualLogSource logger = null;
+        public static ConfigFile config = null;
 
         public static bool changeGUID = false;
 
@@ -80,6 +81,7 @@ namespace RavenM
         public static float chatYOffset = 370f;
         public static float chatXOffset = 10f;
         public static int chatFontSize = 0;
+        public static bool allowVersionDiff = false;
         public static bool changeChatFontSize = false;  //If need to change the font size
         
         private ConfigEntry<bool> configRavenMAddToBuiltInMutators;
@@ -88,6 +90,7 @@ namespace RavenM
         {
             instance = this;
             logger = Logger;
+            config = Config;
 
             string[] args = Environment.GetCommandLineArgs();
 
@@ -117,7 +120,7 @@ namespace RavenM
                                                                 "The mutators in the folder will be added automatically as Build In Mutators, this is for testing mutators without having to start the game with mods.");
             showBuildGUID = Config.Bind("General.Toggles",
                 "Show GUID",
-                false,
+                true,
                 "Show GUID on screen.").Value;
             chatWidth = Config.Bind("General.ChatField",
                 "Chat Width",
@@ -127,18 +130,22 @@ namespace RavenM
                 "Chat Height",
                 200f,
                 "Chat field height.").Value;
-            chatXOffset = Config.Bind("General.ChatField",
-                "Chat XOffset",
-                370f,
-                "Chat field x-axis position.").Value;
             chatYOffset = Config.Bind("General.ChatField",
                 "Chat YOffset",
-                Screen.width - 310f,
+                370f,
                 "Chat field y-axis position.").Value;
+            chatXOffset = Config.Bind("General.ChatField",
+                "Chat XOffset",
+                10f,
+                "Chat field x-axis position.").Value;
             chatFontSize = Config.Bind("General.ChatField",
                 "Chat Font Size",
                 0,
                 "Change the font size of chat field(0 is disable).").Value;
+            allowVersionDiff = Config.Bind("General.Toggles",
+                "Allow clients with different plugin version",
+                false,
+                "Allow host and players use plugins with different version.").Value;
             if (chatFontSize != 0)
                 changeChatFontSize = true;
             changeGUID = configRavenMDevMod.Value;
@@ -150,8 +157,10 @@ namespace RavenM
             }
             else
             {
+                if (customBuildInMutators != "NOT_REAL" && customBuildInMutators != "") {
+                    Logger.LogError($"Directory {customBuildInMutators} could not be found.");
+                }
                 customBuildInMutators = "NOT_REAL";
-                Logger.LogError($"Directory {customBuildInMutators} could not be found.");
             }
             var harmony = new Harmony("patch.ravenm");
             try {
@@ -181,7 +190,7 @@ namespace RavenM
 
             if (GameManager.instance != null && GameManager.instance.buildNumber != EXPECTED_BUILD_NUMBER) 
             {
-                GUI.Label(new Rect(10, Screen.height - 60, 300, 40), $"<color=red>RavenM is not compatible with this version of the game. Expected EA{EXPECTED_BUILD_NUMBER}, got EA{GameManager.instance.buildNumber}.</color>");
+                GUI.Label(new Rect(10, Screen.height - 60, 300, 40), $"<color=yellow>RavenM is not compatible with this version of the game. Expected EA{EXPECTED_BUILD_NUMBER}, got EA{GameManager.instance.buildNumber}.</color>");
             }
         }
         public void printConsole(string message)
