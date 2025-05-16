@@ -5,6 +5,7 @@ using System.IO.Compression;
 using SimpleJSON;
 using System.Net;
 using UnityEngine;
+using System.Reflection;
 
 namespace RavenM.Updater
 {
@@ -16,7 +17,6 @@ namespace RavenM.Updater
     [BepInPlugin(PluginInfo.PLUGIN_GUID, PluginInfo.PLUGIN_NAME, PluginInfo.PLUGIN_VERSION)]
     class Plugin : BaseUnityPlugin
     {
-        static readonly string PLUGIN_DIR = "BepInEx/plugins/";
         static readonly string DEV_DOWNLOAD_URL = "https://nightly.link/iliadsh/RavenM/workflows/main/master/RavenM.zip";
 
         enum UpdateChannel
@@ -61,7 +61,9 @@ namespace RavenM.Updater
             string time;
             string download_url;
 
-            var mod_file = PLUGIN_DIR + "RavenM.dll";
+            //need check
+            var pluginDirectory = new FileInfo(Assembly.GetAssembly(this.GetType()).Location).DirectoryName;
+            var mod_file = pluginDirectory +"RavenM.dll";
             if (File.Exists(mod_file))
             {
                 mod_creation_time = File.GetCreationTime(mod_file);
@@ -107,8 +109,8 @@ namespace RavenM.Updater
                         {
                             try
                             {
-                                s.ExtractToFile(PLUGIN_DIR + s.Name, true);
-                                File.SetCreationTime(PLUGIN_DIR + s.Name, upload_time);
+                                s.ExtractToFile(pluginDirectory + s.Name, true);
+                                File.SetCreationTime(pluginDirectory + s.Name, upload_time);
                             }
                             catch (Exception e)
                             {
