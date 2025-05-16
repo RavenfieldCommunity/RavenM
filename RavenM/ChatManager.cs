@@ -352,8 +352,8 @@ namespace RavenM
                     if (!local)
                     {
                         UI.GameUI.instance.ToggleNameTags();
-                            PushLobbyCommandChatMessage("Set nametags to " + commands[1], Color.white, false, false);
-                            break;
+                        PushLobbyCommandChatMessage("Set nametags to " + commands[1], Color.white, false, false);
+                        break;
                     }
 
                         bool needEnable = true;
@@ -364,11 +364,11 @@ namespace RavenM
                         else if (commands[1] == "team")
                             isTeamOnly = true;
                         else if (commands[1] != "on")
-                    {
+                        {
                             needEnable = bool.Parse(commands[1]);
                             outputMessage = needEnable ? "on" : "off";
                             isTeamOnly = false;
-                    }
+                        }
                         
                         LobbySystem.instance.SetLobbyDataDedup("nameTags", needEnable.ToString());
                         LobbySystem.instance.SetLobbyDataDedup("nameTagsForTeamOnly", isTeamOnly.ToString());
@@ -381,7 +381,7 @@ namespace RavenM
                         {
                             string availableCommandsText = "";
                             foreach (Command availableCommand in CommandManager.GetAllCommands())
-                    {
+                            {
                                 availableCommandsText = availableCommand.CommandName + " " + availableCommandsText;
                             }
                             PushLobbyChatMessage($"All available commands, use `/help <command>` for more details:\n  {availableCommandsText}");
@@ -453,7 +453,7 @@ namespace RavenM
                                 foreach (var memberIdb in LobbySystem.instance.GetLobbyMembers())
                                 {
                                     if (commands[1] == SteamFriends.GetFriendPersonaName(memberIdb) && memberIdb != LobbySystem.instance.OwnerID)
-                        {
+                                    {
                                         LobbySystem.instance.CurrentBannedMembers.Add(memberIdb);
                                         PushLobbyCommandChatMessage($"Banned {SteamFriends.GetFriendPersonaName(memberIdb)} ({memberIdb})", Color.white, false, true);
                                         targetFound = true;
@@ -468,6 +468,8 @@ namespace RavenM
                         }
                         break;
                     case "unban":
+                        if (!local)
+                            break;
                         var memberId = new CSteamID(ulong.Parse(commands[1]));
                         if (LobbySystem.instance.CurrentBannedMembers.Contains(memberId))
                         {
@@ -476,9 +478,8 @@ namespace RavenM
                         }
                         else
                         {
-                            PushLobbyCommandChatMessage($"Player {commands[1]} is not exist or you are unbaning youeself", Color.green, false, true);
-                            
-                    }
+                            PushLobbyCommandChatMessage($"Player {commands[1]} is not exist or you are unbaning youeself", Color.red, false, true);
+                        }
                     break;
                     case "kill":
                         string target = commands[1];
@@ -488,7 +489,8 @@ namespace RavenM
                             return;
                         }
                         targetActor.Kill(new DamageInfo(DamageInfo.DamageSourceType.FallDamage, actor, null));
-                        PushCommandChatMessage($"Killed actor {targetActor.name}", Color.white, false, false);
+                        if(!local)
+                            PushCommandChatMessage($"Killed actor {targetActor.name}", Color.white, false, false);
                         break;
                 default:
                     // TODO: Allow other mods to handle commands from the lobby
@@ -504,8 +506,8 @@ namespace RavenM
                     PushCommandChatMessage($"{cmd.SyntaxMessage}",Color.red,false,false);
             }
 
-            if (cmd.Global == true && local == true)
-            SendLobbyChat(message);
+            //if (cmd.Global == true && local == true)
+            //SendLobbyChat(message);
         }
 
         /// <summary>

@@ -435,6 +435,11 @@ namespace RavenM
             return ret;
         }
 
+        public bool HostLoaded()
+        {
+            return SteamMatchmaking.GetLobbyMemberData(ActualLobbyID, OwnerID, "loaded") == "true";
+        }
+
         public void SetLobbyDataDedup(string key, string value)
         {
             if (!InLobby || !LobbyDataReady || !IsLobbyOwner)
@@ -489,15 +494,14 @@ namespace RavenM
 
             ChatManager.instance.PushLobbyChatMessage($"Welcome to the lobby! Press {ChatManager.instance.GlobalChatKeybind} or {ChatManager.instance.TeamChatKeybind} to chat.\nUse `/help` for availdable commands.");
             ChatManager.instance.PushLobbyChatMessage($"");
-            //ChatManager.instance.SendLobbyChat("joined lobby");
 
 
             if (IsLobbyOwner)
             {
                 OwnerID = SteamUser.GetSteamID();
                 SetLobbyDataDedup("owner", OwnerID.ToString());
-                SetLobbyDataDedup("lobbyname", LobbyName);
                 SetLobbyDataDedup("build_id", Plugin.BuildGUID);
+                SetLobbyDataDedup("lobbyname", LobbyName);
                 if (!ShowOnList)
                     SetLobbyDataDedup("hidden", "true");
                 if (MidgameJoin)
@@ -533,8 +537,8 @@ namespace RavenM
                 SteamMatchmaking.SetLobbyMemberData(ActualLobbyID, "loaded", "yes");
                 SetLobbyDataDedup("started", "false");
 
-                //idk weather personperhaps is availdable now, of course i should ask him before refer his src damm
                 ulong totalModSize = 0;
+
                 foreach (PublishedFileId_t mod in mods)
                 {
                     SteamUGC.GetItemInstallInfo(mod, out ulong size, out string folder, (1024 * 32), out uint timestamp);
@@ -1006,6 +1010,10 @@ namespace RavenM
                             for (int i = 0; i < mutator.configuration.GetAllFields().Count(); i++)
                             {
                                 var item = mutator.configuration.GetAllFields().ElementAt(i);
+
+                                if (item == null)
+                                    continue;
+
                                 if (item.SerializeValue() != "")
                                 {
                                     item?.DeserializeValue(config[i]);
@@ -1135,7 +1143,7 @@ namespace RavenM
                     if (GUILayout.Button("JOIN"))
                         GUIStack.Push("Join");
 
-                    GUILayout.Label($"RavenM v{PluginInfo.PLUGIN_VERSION}\nUnmerged patch 2");
+                    GUILayout.Label($"RavenM v{PluginInfo.PLUGIN_VERSION}\nUnmerged patch 3");
                     if (GUILayout.Button("Project webpage"))
                         Application.OpenURL("https://ravenfieldcommunity.github.io/docs/en/Projects/ravenm.html");
                 }
@@ -1176,7 +1184,7 @@ namespace RavenM
 
                     ShowOnList = GUILayout.Toggle(ShowOnList, "SHOW ON LOBBY\nLIST");
 
-                    MidgameJoin = GUILayout.Toggle(MidgameJoin, "JOINABLE\nMIDGAME");
+                    MidgameJoin = GUILayout.Toggle(MidgameJoin, "JOINABLE MIDGAME");
 
                     EnableGodInspect = GUILayout.Toggle(EnableGodInspect, "ENABLE\nGOD INSPECT");
 
@@ -1364,11 +1372,19 @@ namespace RavenM
 
                     GUILayout.Space(10f);
 
+                    var ownerId = SteamMatchmaking.GetLobbyData(LobbyView, "owner");
+                    var ownerName = SteamFriends.GetFriendPersonaName( new CSteamID(ulong.Parse(ownerId)) );
+
+                    GUILayout.Label($"OWNER: {ownerName}");
+
                     GUILayout.Label($"MEMBERS: {SteamMatchmaking.GetNumLobbyMembers(LobbyView)}/{SteamMatchmaking.GetLobbyMemberLimit(LobbyView)}");
 
                     var modList = SteamMatchmaking.GetLobbyData(LobbyView, "mods");
                     var modCount = modList != string.Empty ? modList.Split(',').Length : 0;
-                    GUILayout.Label($"MODS: {modCount}");
+
+                    var modSize = SteamMatchmaking.GetLobbyData(LobbyView, "modtotalsize");
+
+                    GUILayout.Label($"MODS: {modCount} mods | {modSize}");
 
                     GUILayout.Label($"BOTS: {SteamMatchmaking.GetLobbyData(LobbyView, "botNumberField")}");
 
@@ -1390,7 +1406,6 @@ namespace RavenM
                     {
                         if (SteamMatchmaking.GetLobbyData(LobbyView, "lobbyPasssword") == "")
                         {
-                            Plugin.logger.LogInfo("pwd" + "");
                             SteamMatchmaking.JoinLobby(LobbyView);
                             InLobby = true;
                             IsLobbyOwner = false;
@@ -1470,6 +1485,18 @@ namespace RavenM
                 GUILayout.EndHorizontal();
 
                 GUI.BeginScrollView(new Rect(0,0,200,400),scrollPosition,new Rect (0,0,100,1));
+                var modList = SteamMatchmaking.GetLobbyData(LobbyView, "mods");
+                var modCount = modList != string.Empty ? modList.Split(',').Length : 0;
+                var modSize = SteamMatchmaking.GetLobbyData(LobbyView, "modtotalsize");
+                GUILayout.Label($"MODS: {modCount} | {modSize}");
+
+                GUILayout.Space(10f);
+
+                GUILayout.BeginHorizontal();
+                GUILayout.FlexibleSpace();
+                GUILayout.Label("MEMBERS:");
+                GUILayout.FlexibleSpace();
+                GUILayout.EndHorizontal();
 
                 for (int i = 0; i < len; i++)
                 {

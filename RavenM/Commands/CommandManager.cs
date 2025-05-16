@@ -14,10 +14,11 @@ namespace RavenM.Commands
         public CommandManager()
         {
             Commands = new List<Command>();
+            //ban tp 
             Commands.Add(new Command(
                 _name: "help",
-                _reqArgs: new object[] { null }, 
                 _global: false, 
+                _reqArgs:null,
                 _hostOnly: false, 
                 scripted: true,
                 allowInLobby: true,
@@ -28,6 +29,7 @@ namespace RavenM.Commands
             Commands.Add(new Command(
                 _name: "tags",
                 _global: true, 
+                _reqArgs:null,
                 _hostOnly: true, 
                 scripted: true, 
                 allowInLobby: true,
@@ -37,8 +39,8 @@ namespace RavenM.Commands
             );
             Commands.Add(new Command(
                 _name: "kill", 
-                _reqArgs: new object[] { "actor" }, 
                 _global: true, 
+                _reqArgs:null,
                 _hostOnly: true, 
                 scripted: true, 
                 allowInLobby: false, 
@@ -48,9 +50,10 @@ namespace RavenM.Commands
             );
             Commands.Add(new Command(
                 _name: "ban", 
-                _global: true, 
-                _hostOnly: true, 
-                scripted: true, 
+                _global: true,
+                _reqArgs:null,
+                _hostOnly: true,
+                scripted: true,
                 allowInLobby: true,
                 allowInGame: true,
                 helpMessage:"Ban player out of lobby",
@@ -67,6 +70,39 @@ namespace RavenM.Commands
                 helpMessage:"Unban player ",
                 syntaxMessage:"/unban <player steamid>")
             );
+            /*Commands.Add(new Command(
+                _name: "godi", 
+                _global: true,
+                _reqArgs:null,
+                _hostOnly: true,
+                scripted: true,
+                allowInLobby: false,
+                allowInGame: true,
+                helpMessage:"Give specific player premission of using God Inspect if it is disabled",
+                syntaxMessage:"/godi <player steamid>")
+            );
+            Commands.Add(new Command(
+                _name: "ungodi", 
+                _global: true,
+                _reqArgs:null,
+                _hostOnly: true,
+                scripted: true,
+                allowInLobby: false,
+                allowInGame: true,
+                helpMessage:"Cancel specific player's premission of using God Inspect",
+                syntaxMessage:"/ungodi <player steamid>")
+            );
+            Commands.Add(new Command(
+                _name: "tp", 
+                _global: true,
+                _reqArgs:null,
+                _hostOnly: true,
+                scripted: true,
+                allowInLobby: true,
+                allowInGame: true,
+                helpMessage:"",
+                syntaxMessage:"/ungodi <player steamid>")
+            );*/
             Plugin.logger.LogInfo("CommandManager registered commands: " + Commands.Count);
         }
         public Command GetCommandFromName(string command)
@@ -98,8 +134,6 @@ namespace RavenM.Commands
         }
         public void AddCustomCommand(Command cmd)
         {
-            if (cmd.Scripted)
-                Plugin.logger.LogInfo("RegArgs Length: " + cmd.reqArgs.Length);
                 Commands.Add(cmd);
         }
         public int GetPlayerGuid(Actor actor)
@@ -111,82 +145,13 @@ namespace RavenM.Commands
             }
             return 0;
         }
-        public string GetRequiredArgTypes(Command cmd)
+
+        public bool HasRequiredArgs(Command cmd,object[] obj)
         {
-            if (cmd.reqArgs[0] == null)
-            {
-                return $"/{cmd.CommandName}";
-            }
-            string requiredTypes = $"/{cmd.CommandName}";
-            for(int x = 0; x < cmd.reqArgs.Length; x++)
-            {
-                requiredTypes += $" <{cmd.reqArgs[x].GetType().ToString()}>";
-            }
-            return requiredTypes;
+            return true;
         }
-        private void PrintNotEnoughArguments(Command cmd)
-        {
-            ChatManager.instance.PushCommandChatMessage($"Not enough Arguments for Command {cmd.CommandName}. \nUsage: {GetRequiredArgTypes(cmd)}.", Color.red,true, false); ;
-        }
-        private void PrintCouldNotConvert(Command cmd)
-        {
-            ChatManager.instance.PushCommandChatMessage($"Could not convert Argument(s) for Command {cmd.CommandName}. \nUsage: {GetRequiredArgTypes(cmd)}.", Color.red,true, false); ;
-        }
-        public bool HasRequiredArgs(Command cmd, string[] command)
-        {
-            // Shift Array by one to the right because command[0] would be the initCommand  - Chryses
-            string[] args = new string[command.Length - 1];
-            Array.Copy(command, 1, args, 0, command.Length - 1);
-            // For Testing
-            if (Plugin.changeGUID)
-            {
-                foreach (string arg in args)
-                {
-                    Plugin.logger.LogInfo("Arg: " + arg );
-                }
-                Plugin.logger.LogInfo("Size reqArgs " + cmd.reqArgs.Length + " Size command " + args.Length);
-            }
-            int reqArgsCount = cmd.reqArgs.Length;
-            if ((reqArgsCount) != args.Length)
-            {
-                PrintNotEnoughArguments(cmd);
-                return false;
-            }
-            int convertedArgCounter = 0;
-            for(int x = 0;x < reqArgsCount; x++)
-            {
-                var arg = args[x]; 
-                Plugin.logger.LogInfo("Trying to convert " + arg);
-                if (string.IsNullOrEmpty(arg))
-                    return false;
-                if (arg.Equals(cmd.CommandName))
-                    continue;
-                Type type = cmd.reqArgs[x].GetType();
-                object convertedArg;
-                try
-                {
-                    convertedArg = Convert.ChangeType(arg, type);
-                }catch(FormatException exe)
-                {
-                    Plugin.logger.LogError(exe.Message);
-                    PrintCouldNotConvert(cmd);
-                    return false;
-                }
-                if(convertedArg == null)
-                {
-                    return false;
-                }
-                if (type == convertedArg.GetType())
-                {
-                    convertedArgCounter++;
-                }
-            }
-            if(convertedArgCounter == reqArgsCount)
-            {
-                return true;
-            }
-            return false;
-        }
+
+        
         public Actor GetActorByName(string name)
         {
             foreach (Actor actor in ActorManager.instance.actors)
@@ -194,14 +159,14 @@ namespace RavenM.Commands
                 if (actor.name.ToLower() == name.ToLower())
                 {
                     return actor;
-                }  
+                }
             }
             return null;
         }
         
         public bool HasPermission(Command command, ulong id,bool local)
         {
-            //Plugin.logger.LogInfo(id + " from packet " + " == " + LobbySystem.instance.OwnerID.m_SteamID);
+            Plugin.logger.LogInfo(id + " from packet " + " " + LobbySystem.instance.OwnerID.m_SteamID);
             if (command.HostOnly)
             {
                 if (id == LobbySystem.instance.OwnerID.m_SteamID)
