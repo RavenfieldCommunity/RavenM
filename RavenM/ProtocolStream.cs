@@ -325,6 +325,8 @@ namespace RavenM
         public void Write(ExplodeProjectilePacket value)
         {
             Write(value.Id);
+            Write(value.SourceId);
+            Write(value.Position);
         }
 
         public void Write(DominationStatePacket value)
@@ -514,6 +516,13 @@ namespace RavenM
             Write(value.SourceId);
             Write(value.ActorId);
             Write(value.VehicleId);
+        }
+
+        public void Write(TriggerSpawnActorPacket value)
+        {
+            Write(value.Id);
+            Write(value.ActorId);
+            Write(value.SpawnInfo);
         }
     }
 
@@ -1178,6 +1187,16 @@ namespace RavenM
                 SourceId = ReadInt32(),
                 ActorId = ReadInt32(),
                 VehicleId = ReadInt32(),
+            };
+        }
+
+        public TriggerSpawnActorPacket ReadTriggerSpawnActorPacket()
+        {
+            return new TriggerSpawnActorPacket
+            {
+                Id = ReadInt32(),
+                ActorId = ReadInt32(),
+                SpawnInfo = ReadInt32()
             };
         }
     }

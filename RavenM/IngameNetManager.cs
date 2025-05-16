@@ -244,7 +244,7 @@ namespace RavenM
             foreach (var instruction in instructions)
             {
                 // Pop the third argument from the evaluation stack (transform.parent) and push a null.
-                if (instruction.opcode == OpCodes.Call && ((MethodInfo)instruction.operand).Name == nameof(UnityEngine.Object.Instantiate)) 
+                if (instruction.opcode == OpCodes.Call && ((MethodInfo)instruction.operand).Name == nameof(UnityEngine.Object.Instantiate))
                 {
                     yield return new CodeInstruction(OpCodes.Pop);
                     yield return new CodeInstruction(OpCodes.Ldnull);
@@ -446,7 +446,7 @@ namespace RavenM
     [HarmonyPatch(typeof(GameManager), nameof(GameManager.PauseGame))]
     public class DisablePauseGame
     {
-        static bool Prefix() 
+        static bool Prefix()
         {
             if (!IngameNetManager.instance.IsClient)
                 return true;
@@ -1483,25 +1483,28 @@ public class IngameNetManager : MonoBehaviour
 
                                     vehicle.health = vehiclePacket.Health;
 
-                                    if (vehiclePacket.Dead)
-                                    {
-                                        RemoteDeadVehicles.Add(vehiclePacket.Id);
-                                        if (!vehicle.dead)
-                                            vehicle.Die(DamageInfo.Default);
+                                        vehicle.isInvulnerable = vehiclePacket.Invulnerable;
+
+                                        if (vehiclePacket.Dead)
+                                        {
+                                            RemoteDeadVehicles.Add(vehiclePacket.Id);
+                                            if (!vehicle.dead)
+                                                vehicle.Die(DamageInfo.Default);
+                                        }
+
+                                        else if (vehicle.health <= 0)
+                                            vehicle.Damage(DamageInfo.Default);
+                                        else if (vehicle.burning)
+                                            typeof(Vehicle).GetMethod("StopBurning", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(vehicle, new object[] { });
+                                        else if (vehicle.dead)
+                                            vehicle.GetType().GetMethod("Ressurect", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(vehicle, new object[] { });
                                     }
-                                    else if (vehicle.health <= 0)
-                                        vehicle.Damage(DamageInfo.Default);
-                                    else if (vehicle.burning)
-                                        typeof(Vehicle).GetMethod("StopBurning", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(vehicle, new object[] { });
-                                    else if (vehicle.dead)
-                                        vehicle.GetType().GetMethod("Ressurect", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(vehicle, new object[] { });
                                 }
-                            }
-                            break;
-                        case PacketType.Damage:
-                            {
-                                Plugin.logger.LogInfo("Damage packet.");
-                                DamagePacket damage_packet = dataStream.ReadDamagePacket();
+                                break;
+                            case PacketType.Damage:
+                                {
+                                    Plugin.logger.LogInfo("Damage packet.");
+                                    DamagePacket damage_packet = dataStream.ReadDamagePacket();
 
                                 if (!ClientActors.ContainsKey(damage_packet.Target))
                                     break;
@@ -1511,28 +1514,31 @@ public class IngameNetManager : MonoBehaviour
 
                                 Plugin.logger.LogInfo($"Got damage from {targetActor.name}!");
 
-                                DamageInfo damage_info = new DamageInfo
+                                    DamageInfo damage_info = new DamageInfo
+                                    {
+                                        type = damage_packet.Type,
+                                        healthDamage = damage_packet.HealthDamage,
+                                        balanceDamage = damage_packet.BalanceDamage,
+                                        isSplashDamage = damage_packet.IsSplashDamage,
+                                        isPiercing = damage_packet.IsPiercing,
+                                        isCriticalHit = damage_packet.IsCriticalHit,
+                                        point = damage_packet.Point,
+                                        direction = damage_packet.Direction,
+                                        impactForce = damage_packet.ImpactForce,
+                                        sourceActor = sourceActor,
+                                        sourceWeapon = null,
+                                    };
+                                    if (targetActor.controller is NetActorController)
+                                    {
+                                        (targetActor.controller as NetActorController).actorKillCredit = damage_packet.SourceActor;
+                                    }
+                                    targetActor.Damage(damage_info);
+                                }
+                                break;
+                            case PacketType.Death:
                                 {
-                                    type = damage_packet.Type,
-                                    healthDamage = damage_packet.HealthDamage,
-                                    balanceDamage = damage_packet.BalanceDamage,
-                                    isSplashDamage = damage_packet.IsSplashDamage,
-                                    isPiercing = damage_packet.IsPiercing,
-                                    isCriticalHit = damage_packet.IsCriticalHit,
-                                    point = damage_packet.Point,
-                                    direction = damage_packet.Direction,
-                                    impactForce = damage_packet.ImpactForce,
-                                    sourceActor = sourceActor,
-                                    sourceWeapon = null,
-                                };
-
-                                targetActor.Damage(damage_info);
-                            }
-                            break;
-                        case PacketType.Death:
-                            {
-                                Plugin.logger.LogInfo("Death packet.");
-                                DamagePacket damage_packet = dataStream.ReadDamagePacket();
+                                    Plugin.logger.LogInfo("Death packet.");
+                                    DamagePacket damage_packet = dataStream.ReadDamagePacket();
 
                                 if (!ClientActors.ContainsKey(damage_packet.Target))
                                     break;
@@ -2072,19 +2078,25 @@ public class IngameNetManager : MonoBehaviour
                                 if (projectile == null)
                                     continue;
 
-                                // RemoteDetonatedProjectiles don't explode like normal projectiles.
-                                if (projectile.GetType() == typeof(RemoteDetonatedProjectile))
-                                {
-                                    Plugin.logger.LogInfo($"Detonate.");
-                                    (projectile as RemoteDetonatedProjectile).Detonate();
-                                }
-                                else
-                                {
-                                    var Explode = projectile.GetType().GetMethod("Explode", BindingFlags.Instance | BindingFlags.NonPublic);
-                                    // This shouldn't ever not exist, since we send only for ExplodingProjectiles.
-                                    if (Explode != null)
+                                    if (ClientActors.TryGetValue(explodePacket.SourceId, out Actor source))
+                                            projectile.killCredit = source;
+
+                                    projectile.transform.position = explodePacket.Position;
+                                    // RemoteDetonatedProjectiles don't explode like normal projectiles.
+                                    if (projectile.GetType() == typeof(RemoteDetonatedProjectile))
                                     {
-                                        var up = -projectile.transform.forward;
+                                        Plugin.logger.LogInfo($"Detonate.");
+
+
+                                        (projectile as RemoteDetonatedProjectile).Detonate();
+                                    }
+                                    else
+                                    {
+                                        var Explode = projectile.GetType().GetMethod("Explode", BindingFlags.Instance | BindingFlags.NonPublic);
+                                        // This shouldn't ever not exist, since we send only for ExplodingProjectiles.
+                                        if (Explode != null)
+                                        {
+                                            var up = -projectile.transform.forward;
 
                                         if (projectile.velocity != Vector3.zero &&
                                             projectile.ProjectileRaycast(new Ray(projectile.transform.position, projectile.velocity.normalized),
@@ -2271,14 +2283,14 @@ public class IngameNetManager : MonoBehaviour
                                 var actor = ClientActors.ContainsKey(commandPacket.Id) ? ClientActors[commandPacket.Id] : null;
                                 bool inLobby = LobbySystem.instance.InLobby;
 
-                                if (!inLobby && actor != null)
-                                {
-                                    ChatManager.instance.ProcessChatCommand(commandPacket.Command, actor, commandPacket.SteamID, false);
-                                }
-                                else
-                                {
-                                    ChatManager.instance.ProcessLobbyChatCommand(commandPacket.Command, commandPacket.SteamID, false);
-                                }
+                                    if (!inLobby && actor != null)
+                                    {
+                                        ChatManager.instance.ProcessChatCommand(commandPacket.Command, actor, commandPacket.SteamID, false);
+                                    }
+                                    else
+                                    {
+                                        ChatManager.instance.ProcessLobbyChatCommand(commandPacket.Command, commandPacket.SteamID, false);
+                                    }
 
                             }
                             break;
@@ -2325,65 +2337,96 @@ public class IngameNetManager : MonoBehaviour
                                 if (actor == null)
                                     break;
 
-                                var controller = (AiActorController)actor.controller;
-                                controller.targetDetectionProgress = 0f;
-                                typeof(DetectionUi).GetMethod("StartDetection", BindingFlags.Static | BindingFlags.Public).Invoke(null, new object[] { controller });
-                            }
-                            break;
-                        case PacketType.Trigger:
-                            {
-                                var triggerPacket = dataStream.ReadTriggerPacket();
-                                Plugin.logger.LogDebug($"Receiving Trigger Packet with ID: {triggerPacket.Id}");
-                                List<TriggerBaseComponent> baseComponents = FindObjectsOfType<TriggerBaseComponent>().ToList();
-                                List<TriggerReceiver> baseReceivers = FindObjectsOfType<TriggerReceiver>().ToList();
-                                Plugin.logger.LogDebug(baseComponents.Count);
-                                TriggerBaseComponent source = null;
-                                foreach (TriggerBaseComponent component in baseComponents)
+                                    var controller = (AiActorController)actor.controller;
+                                    controller.targetDetectionProgress = 0f;
+                                    typeof(DetectionUi).GetMethod("StartDetection", BindingFlags.Static | BindingFlags.Public).Invoke(null, new object[] { controller });
+                                }
+                                break;
+                            case PacketType.Trigger:
                                 {
-                                    if (TriggerReceivePatch.GetTriggerComponentHash(component) == triggerPacket.SourceId)
+                                    var triggerPacket = dataStream.ReadTriggerPacket();
+                                    Plugin.logger.LogDebug($"Receiving Trigger Packet with ID: {triggerPacket.Id}");
+                                    List<TriggerBaseComponent> baseComponents = FindObjectsOfType<TriggerBaseComponent>().ToList();
+                                    List<TriggerReceiver> baseReceivers = FindObjectsOfType<TriggerReceiver>().ToList();
+                                    Plugin.logger.LogDebug(baseComponents.Count);
+                                    TriggerBaseComponent source = null;
+                                    foreach (TriggerBaseComponent component in baseComponents)
                                     {
-                                        source = component;
+                                        if (TriggerReceivePatch.GetTriggerComponentHash(component) == triggerPacket.SourceId)
+                                        {
+                                            source = component;
+                                            break;
+                                        }
+                                    }
+                                    if (source == null)
+                                    {
+                                        Plugin.logger.LogWarning($"Failed to find source for trigger packet! packetID: {triggerPacket.Id}, sourceId: {triggerPacket.SourceId}");
                                         break;
                                     }
-                                }
-                                if (source == null)
-                                {
-                                    Plugin.logger.LogWarning($"Failed to find source for trigger packet! packetID: {triggerPacket.Id}, sourceId: {triggerPacket.SourceId}");
-                                    return;
-                                }
-                                TriggerReceiver targetReceiver = null;
-                                foreach (TriggerReceiver receiver in baseReceivers)
-                                {
-                                    if (TriggerReceivePatch.GetTriggerComponentHash(receiver) == triggerPacket.Id)
+                                    TriggerReceiver targetReceiver = null;
+                                    foreach (TriggerReceiver receiver in baseReceivers)
                                     {
-                                        targetReceiver = receiver;
+                                        if (TriggerReceivePatch.GetTriggerComponentHash(receiver) == triggerPacket.Id)
+                                        {
+                                            targetReceiver = receiver;
+                                            break;
+                                        }
+                                    }
+                                    if (targetReceiver == null)
+                                    {
+                                        Plugin.logger.LogWarning($"Failed to find target receiver for trigger packet!! : {triggerPacket.Id}");
                                         break;
                                     }
-                                }
-                                if (targetReceiver == null)
-                                {
-                                    Plugin.logger.LogWarning($"Failed to find target receiver for trigger packet!! : {triggerPacket.Id}");
-                                    return;
-                                }
 
-                                TriggerSignal signal = new TriggerSignal(source);
-                                signal.context.actor = triggerPacket.ActorId != -1 ? ClientActors[triggerPacket.ActorId] : null;
-                                signal.context.vehicle = triggerPacket.VehicleId != -1 ? ClientVehicles[triggerPacket.VehicleId] : null;
-                                try
-                                {
-                                    targetReceiver.ReceiveSignal(signal);
+                                    TriggerSignal signal = new TriggerSignal(source);
+                                    signal.context.actor = triggerPacket.ActorId != -1 ? ClientActors[triggerPacket.ActorId] : null;
+                                    signal.context.vehicle = triggerPacket.VehicleId != -1 ? ClientVehicles[triggerPacket.VehicleId] : null;
+                                    try
+                                    {
+                                        targetReceiver.ReceiveSignal(signal);
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        Plugin.logger.LogWarning($"Something went wrong with trigger packets somewhere: {e}");
+                                    }
                                 }
-                                catch (Exception e)
+                                break;
+                            case PacketType.TriggerSpawnActor:
                                 {
-                                    Plugin.logger.LogWarning($"Something went wrong with trigger packets somewhere: {e}");
+
+                                    var triggerPacket = dataStream.ReadTriggerSpawnActorPacket();
+                                    Plugin.logger.LogDebug($"Receiving Trigger Packet with ID: {triggerPacket.Id}");
+                                    List<TriggerSpawnSquad> spawnSquadTriggers = FindObjectsOfType<TriggerSpawnSquad>().ToList();
+                                    TriggerSpawnSquad targetReceiver = null;
+                                    foreach (TriggerSpawnSquad receiver in spawnSquadTriggers)
+                                    {
+                                        if (TriggerReceivePatch.GetTriggerComponentHash(receiver) == triggerPacket.Id)
+                                        {
+                                            targetReceiver = receiver;
+                                            break;
+                                        }
+                                    }
+                                    if (targetReceiver == null)
+                                    {
+                                        Plugin.logger.LogWarning($"Failed to find target receiver for trigger packet!! : {triggerPacket.Id}");
+                                        break;
+                                    }
+
+                                    if (triggerPacket.SpawnInfo == -1)
+                                        break;
+                                    TriggerSpawnSquad.SpawnInfo info = targetReceiver.squadMemberInfo[triggerPacket.SpawnInfo];
+
+                                    if (ClientActors.ContainsKey(triggerPacket.ActorId))
+                                        targetReceiver.SpawnActor(ClientActors[triggerPacket.ActorId], info);
+
+
                                 }
-                            }
-                            break;
-                        default:
-                            RSPatch.RSPatch.FixedUpdate(packet, dataStream);
-                            break;
+                                break;
+                            default:
+                                RSPatch.RSPatch.FixedUpdate(packet, dataStream);
+                                break;
+                        }
                     }
-                }
 
                 // SR7, pls update Steamworks.NET.
                 SteamAPI_SteamNetworkingMessage_t_Release.Invoke(null, new object[] { msg_ptr[msg_index] });
@@ -2676,32 +2719,32 @@ public class IngameNetManager : MonoBehaviour
         SendPacketToServer(data, PacketType.GameStateUpdate, Constants.k_nSteamNetworkingSend_Unreliable);
     }
 
-    private int GenerateFlags(Actor actor)
-    {
-        int flags = 0;
-        if (!actor.dead && actor.controller.Aiming()) flags |= (int)ActorStateFlags.Aiming;
-        if (!actor.dead && actor.controller.Crouch()) flags |= (int)ActorStateFlags.Crouch;
-        if (!actor.dead && actor.controller.WantsToFire()) flags |= (int)ActorStateFlags.Fire;
-        if (!actor.dead && actor.controller.HoldingSprint()) flags |= (int)ActorStateFlags.HoldingSprint;
-        if (!actor.dead && actor.controller.IdlePose()) flags |= (int)ActorStateFlags.IdlePose;
-        if (!actor.dead && actor.controller.IsAirborne()) flags |= (int)ActorStateFlags.IsAirborne;
-        if (!actor.dead && actor.controller.IsAlert()) flags |= (int)ActorStateFlags.IsAlert;
-        if (!actor.dead && actor.controller.IsMoving()) flags |= (int)ActorStateFlags.IsMoving;
-        if (actor.controller.IsOnPlayerSquad()) flags |= (int)ActorStateFlags.IsOnPlayerSquad;
-        if (!actor.dead && actor.controller.IsReadyToPickUpPassengers()) flags |= (int)ActorStateFlags.IsReadyToPickUpPassengers;
-        if (!actor.dead && actor.controller.IsSprinting()) flags |= (int)ActorStateFlags.IsSprinting;
-        if (!actor.dead && actor.controller.IsTakingFire()) flags |= (int)ActorStateFlags.IsTakingFire;
-        if (!actor.dead && actor.controller.Jump()) flags |= (int)ActorStateFlags.Jump;
-        if (!actor.dead && actor.controller.OnGround()) flags |= (int)ActorStateFlags.OnGround;
-        if (!actor.dead && actor.controller.ProjectToGround()) flags |= (int)ActorStateFlags.ProjectToGround;
-        if (!actor.dead && actor.controller.Prone()) flags |= (int)ActorStateFlags.Prone;
-        if (!actor.dead && actor.controller.Reload()) flags |= (int)ActorStateFlags.Reload;
-        if (actor.dead) flags |= (int)ActorStateFlags.Dead;
-        if (actor.aiControlled) flags |= (int)ActorStateFlags.AiControlled;
-        if (!actor.dead && actor.controller.DeployParachute()) flags |= (int)ActorStateFlags.DeployParachute;
-
-        return flags;
-    }
+        private int GenerateFlags(Actor actor)
+        {
+            int flags = 0;
+            if (!actor.dead && actor.controller.Aiming()) flags |= (int)ActorStateFlags.Aiming;
+            if (!actor.dead && actor.controller.Crouch()) flags |= (int)ActorStateFlags.Crouch;
+            if (!actor.dead && actor.controller.WantsToFire()) flags |= (int)ActorStateFlags.Fire;
+            if (!actor.dead && actor.controller.HoldingSprint()) flags |= (int)ActorStateFlags.HoldingSprint;
+            if (!actor.dead && actor.controller.IdlePose()) flags |= (int)ActorStateFlags.IdlePose;
+            if (!actor.dead && actor.controller.IsAirborne()) flags |= (int)ActorStateFlags.IsAirborne;
+            if (!actor.dead && actor.controller.IsAlert()) flags |= (int)ActorStateFlags.IsAlert;
+            if (!actor.dead && actor.controller.IsMoving()) flags |= (int)ActorStateFlags.IsMoving;
+            if (actor.controller.IsOnPlayerSquad()) flags |= (int)ActorStateFlags.IsOnPlayerSquad;
+            if (!actor.dead && actor.controller.IsReadyToPickUpPassengers()) flags |= (int)ActorStateFlags.IsReadyToPickUpPassengers;
+            if (!actor.dead && actor.controller.IsSprinting()) flags |= (int)ActorStateFlags.IsSprinting;
+            if (!actor.dead && actor.controller.IsTakingFire()) flags |= (int)ActorStateFlags.IsTakingFire;
+            if (!actor.dead && actor.controller.Jump()) flags |= (int)ActorStateFlags.Jump;
+            if (!actor.dead && actor.controller.OnGround()) flags |= (int)ActorStateFlags.OnGround;
+            if (!actor.dead && actor.controller.ProjectToGround()) flags |= (int)ActorStateFlags.ProjectToGround;
+            if (!actor.dead && actor.controller.Prone()) flags |= (int)ActorStateFlags.Prone;
+            if (!actor.dead && actor.controller.Reload()) flags |= (int)ActorStateFlags.Reload;
+            if (actor.dead) flags |= (int)ActorStateFlags.Dead;
+            if (actor.aiControlled) flags |= (int)ActorStateFlags.AiControlled;
+            if (!actor.dead && actor.controller.DeployParachute()) flags |= (int)ActorStateFlags.DeployParachute;
+            if (!actor.dead && actor.fallenOver) flags |= (int)ActorStateFlags.Knockdown;
+            return flags;
+        }
 
     public void SendActorFlags()
     {
@@ -2755,55 +2798,55 @@ public class IngameNetManager : MonoBehaviour
         {
             var actor = ClientActors[owned_actor];
 
-            ActorPacket net_actor = new ActorPacket
-            {
-                Id = owned_actor,
-                Name = actor.name,
-                // If the player is on a moving platform, we send the delta to
-                // the vehicle instead of the actual position. This is so that
-                // we can stay on the vehicle even though there is a delay in position updates.
-                Position = actor.controller is FpsActorController fpsActorController && fpsActorController.movingPlatformVehicle != null
-                            && fpsActorController.movingPlatformVehicle.TryGetComponent(out GuidComponent _)
-                            ? actor.Position() - fpsActorController.movingPlatformVehicle.transform.position : actor.Position(),
-                Lean = actor.dead ? 0f : actor.controller.Lean(),
-                AirplaneInput = actor.seat != null ? (Vector4?)actor.controller.AirplaneInput() : null,
-                BoatInput = actor.seat != null ? (Vector2?)actor.controller.BoatInput() : null,
-                CarInput = actor.seat != null ? (Vector2?)actor.controller.CarInput() : null,
-                // Dirty conditional, but it is needed to properly update the
-                // turret direction when the user is a player.
-                //
-                // ...Mortars actually use the player's facing direction.
-                // Because why not.
-                FacingDirection = (!actor.aiControlled && actor.IsSeated() && actor.seat.HasActiveWeapon() && actor.seat.activeWeapon.GetType() != typeof(Mortar)) ?
-                                    actor.seat.activeWeapon.CurrentMuzzle().forward :
-                                    actor.controller.FacingDirection(),
-                HelicopterInput = actor.seat != null ? (Vector4?)actor.controller.HelicopterInput() : null,
-                LadderInput = actor.dead ? 0f : actor.controller.LadderInput(),
-                ParachuteInput = actor.dead ? Vector2.zero : actor.controller.ParachuteInput(),
-                // Not the real controller.RangeInput(), but what the mortar sees. Otherwise,
-                // the other clients cant keep up with the fast mouse scrolls.
-                RangeInput = !actor.dead && actor.IsSeated() && actor.seat.HasActiveWeapon() && actor.seat.activeWeapon.GetType() == typeof(Mortar)
-                                ? (float)typeof(Mortar).GetField("range", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(actor.seat.activeWeapon)
-                                : 0f,
-                Velocity = actor.dead ? Vector3.zero : actor.controller.Velocity(),
-                ActiveWeaponHash = actor.activeWeapon != null
-                                    ? actor.IsSeated()
-                                        ? actor.seat.ActiveWeaponSlot()
-                                        : actor.activeWeapon.weaponEntry?.name.GetHashCode() ?? 0
-                                    : 0,
-                Team = actor.team,
-                MarkerPosition = actor.aiControlled ? null : (Vector3?)MarkerPosition,
-                Flags = GenerateFlags(actor),
-                Ammo = !actor.dead && actor.activeWeapon != null ? actor.activeWeapon.ammo : 0,
-                Health = actor.health,
-                VehicleId = actor.IsSeated() && actor.seat.vehicle.TryGetComponent(out GuidComponent vguid) ? vguid.guid : 0,
-                Seat = actor.IsSeated() ? actor.seat.vehicle.seats.IndexOf(actor.seat) : -1,
-                MovingPlatformVehicleId = actor.controller is FpsActorController fpsActorController2 && fpsActorController2.movingPlatformVehicle != null
-                                         && fpsActorController2.movingPlatformVehicle.TryGetComponent(out GuidComponent pguid)
-                                         ? pguid.guid : 0,
-                TargetDetectionProgress = actor.controller is AiActorController aiActorController && aiActorController.slowTargetDetection && aiActorController.HasTarget()
-                                         ? aiActorController.targetDetectionProgress : -1f,
-            };
+                ActorPacket net_actor = new ActorPacket
+                {
+                    Id = owned_actor,
+                    Name = actor.name,
+                    // If the player is on a moving platform, we send the delta to
+                    // the vehicle instead of the actual position. This is so that
+                    // we can stay on the vehicle even though there is a delay in position updates.
+                    Position = actor.controller is FpsActorController fpsActorController && fpsActorController.movingPlatformVehicle != null
+                                && fpsActorController.movingPlatformVehicle.TryGetComponent(out GuidComponent _)
+                                ? actor.Position() - fpsActorController.movingPlatformVehicle.transform.position : actor.Position(),
+                    Lean = actor.dead ? 0f : actor.controller.Lean(),
+                    AirplaneInput = actor.seat != null ? (Vector4?)actor.controller.AirplaneInput() : null,
+                    BoatInput = actor.seat != null ? (Vector2?)actor.controller.BoatInput() : null,
+                    CarInput = actor.seat != null ? (Vector2?)actor.controller.CarInput() : null,
+                    // Dirty conditional, but it is needed to properly update the
+                    // turret direction when the user is a player.
+                    //
+                    // ...Mortars actually use the player's facing direction.
+                    // Because why not.
+                    FacingDirection = (!actor.aiControlled && actor.IsSeated() && actor.seat.HasActiveWeapon() && actor.seat.activeWeapon.GetType() != typeof(Mortar)) ?
+                                        actor.seat.activeWeapon.CurrentMuzzle().forward :
+                                        actor.controller.FacingDirection(),
+                    HelicopterInput = actor.seat != null ? (Vector4?)actor.controller.HelicopterInput() : null,
+                    LadderInput = actor.dead ? 0f : actor.controller.LadderInput(),
+                    ParachuteInput = actor.dead ? Vector2.zero : actor.controller.ParachuteInput(),
+                    // Not the real controller.RangeInput(), but what the mortar sees. Otherwise,
+                    // the other clients cant keep up with the fast mouse scrolls.
+                    RangeInput = !actor.dead && actor.IsSeated() && actor.seat.HasActiveWeapon() && actor.seat.activeWeapon.GetType() == typeof(Mortar)
+                                    ? (float)typeof(Mortar).GetField("range", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(actor.seat.activeWeapon)
+                                    : 0f,
+                    Velocity = actor.dead ? Vector3.zero : actor.controller.Velocity(),
+                    ActiveWeaponHash = actor.activeWeapon != null
+                                        ? actor.IsSeated()
+                                            ? actor.seat.ActiveWeaponSlot()
+                                            : actor.activeWeapon.weaponEntry?.name.GetHashCode() ?? 0
+                                        : 0,
+                    Team = actor.team,
+                    MarkerPosition = actor.aiControlled ? null : (Vector3?)MarkerPosition,
+                    Flags = GenerateFlags(actor),
+                    Ammo = !actor.dead && actor.activeWeapon != null ? actor.activeWeapon.ammo : 0,
+                    Health = actor.health,
+                    VehicleId = actor.IsSeated() && actor.seat.vehicle.TryGetComponent(out GuidComponent vguid) ? vguid.guid : 0,
+                    Seat = actor.IsSeated() ? actor.seat.vehicle.seats.IndexOf(actor.seat) : -1,
+                    MovingPlatformVehicleId = actor.controller is FpsActorController fpsActorController2 && fpsActorController2.movingPlatformVehicle != null
+                                             && fpsActorController2.movingPlatformVehicle.TryGetComponent(out GuidComponent pguid)
+                                             ? pguid.guid : 0,
+                    TargetDetectionProgress = actor.controller is AiActorController aiActorController && aiActorController.slowTargetDetection && aiActorController.HasTarget()
+                                             ? aiActorController.targetDetectionProgress : -1f,
+                };
 
             bulkActorUpdate.Updates.Add(net_actor);
         }
@@ -2841,18 +2884,21 @@ public class IngameNetManager : MonoBehaviour
                 continue;
             }
 
-            var net_vehicle = new VehiclePacket
-            {
-                Id = owned_vehicle,
-                NameHash = tag.NameHash,
-                Mod = tag.Mod,
-                Position = vehicle.transform.position,
-                Rotation = vehicle.transform.rotation,
-                Health = vehicle.health,
-                Dead = vehicle.dead,
-                IsTurret = vehicle.isTurret,
-                Active = vehicle.gameObject.activeSelf,
-            };
+                var net_vehicle = new VehiclePacket
+                {
+                    Id = owned_vehicle,
+                    NameHash = tag.NameHash,
+                    Mod = tag.Mod,
+                    Position = vehicle.transform.position,
+                    Rotation = vehicle.transform.rotation,
+                    Health = vehicle.health,
+                    Dead = vehicle.dead,
+                    IsTurret = vehicle.isTurret,
+                    Active = vehicle.gameObject.activeSelf,
+                    RamActive = vehicle.Velocity().sqrMagnitude > 400f, //what if we check according to the server?
+                    Invulnerable = vehicle.isInvulnerable //massive problems with anything invulnerable is made. 
+
+                };
 
             bulkVehicleUpdate.Updates.Add(net_vehicle);
         }
