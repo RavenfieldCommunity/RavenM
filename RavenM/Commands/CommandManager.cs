@@ -21,43 +21,51 @@ namespace RavenM.Commands
                 _hostOnly: false, 
                 scripted: true,
                 allowInLobby: true,
-                allowInGame: true)
+                allowInGame: true,
+                helpMessage:"Get help of specific command or get all available commands",
+                syntaxMessage:"/help <command name>")
             );
             Commands.Add(new Command(
-                _name: "nametags",
-                _reqArgs: new object[] { true },
+                _name: "tags",
                 _global: true, 
                 _hostOnly: true, 
                 scripted: true, 
                 allowInLobby: true,
-                allowInGame: true)
+                allowInGame: true,
+                helpMessage:"Enable nametags for global or not, or only for team",
+                syntaxMessage:"/tags (on|off|team)")
             );
             Commands.Add(new Command(
                 _name: "kill", 
                 _reqArgs: new object[] { "actor" }, 
                 _global: true, 
                 _hostOnly: true, 
-                scripted: false, 
+                scripted: true, 
                 allowInLobby: false, 
-                allowInGame: true)
+                allowInGame: true,
+                helpMessage:"Kill specific player",
+                syntaxMessage:"/kill <player name>")
             );
             Commands.Add(new Command(
-                _name: "nametagsteamonly", 
-                _reqArgs: new object[] { true }, 
+                _name: "ban", 
                 _global: true, 
                 _hostOnly: true, 
                 scripted: true, 
                 allowInLobby: true,
-                allowInGame: true)
+                allowInGame: true,
+                helpMessage:"Ban player out of lobby",
+                syntaxMessage:"/ban (<player steamid>|<player steam name>)")
             );
             Commands.Add(new Command(
-                _name: "kick", 
-                _reqArgs: new object[] { "actor" },
-                _global: false,
+                _name: "unban", 
+                _global: true,
+                _reqArgs:null,
                 _hostOnly: true,
                 scripted: true,
                 allowInLobby: true,
-                allowInGame: true)
+                allowInGame: true,
+                helpMessage:"Unban player ",
+                syntaxMessage:"/unban <player steamid>")
             );
             Plugin.logger.LogInfo("CommandManager registered commands: " + Commands.Count);
         }
@@ -181,9 +189,9 @@ namespace RavenM.Commands
         }
         public Actor GetActorByName(string name)
         {
-            foreach(Actor actor in ActorManager.instance.actors)
+            foreach (Actor actor in ActorManager.instance.actors)
             {
-                if(actor.name.ToLower() == name.ToLower())
+                if (actor.name.ToLower() == name.ToLower())
                 {
                     return actor;
                 }  
@@ -196,16 +204,18 @@ namespace RavenM.Commands
             //Plugin.logger.LogInfo(id + " from packet " + " == " + LobbySystem.instance.OwnerID.m_SteamID);
             if (command.HostOnly)
             {
-                if (IngameNetManager.instance.IsHost || id == LobbySystem.instance.OwnerID.m_SteamID)
+                if (id == LobbySystem.instance.OwnerID.m_SteamID)
                     return true;
             }
             else
             {
                 return true;
             }
-            if (local == !command.Global)
+            if (!local)
+            {
+                Plugin.logger.LogInfo("ohhi");
                 return true;
-            ChatManager.instance.PushCommandChatMessage($"You do not have permission to run this command!", Color.red, false, false);
+            }
             return false;
         }
     }
