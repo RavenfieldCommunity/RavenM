@@ -107,12 +107,20 @@ namespace RavenM
             get { return _teamChatKeybind; }
             set { _teamChatKeybind = value; }
         }
+
+        /// <summary>
+        /// Client's steam id
+        /// </summary>
         private CSteamID _steamId;
         public CSteamID SteamId
         {
             get { return _steamId; }
             set { _steamId = value; }
         }
+
+        /// <summary>
+        /// Client's steam username
+        /// </summary>
         private string _steamUsername;
         public string SteamUsername
         {
@@ -259,7 +267,7 @@ namespace RavenM
         /// <param name="sendToAll"></param>
         public void PushLobbyCommandChatMessage(string message, Color color, bool teamOnly, bool sendToAll)
         {
-            FullChatLink += $"<color=#{ColorUtility.ToHtmlStringRGB(color)}><b>{message}</b></color>\n";
+            FullChatLink += $"<color=#{ColorUtility.ToHtmlStringRGB(color)}>{message}</color>\n";
             _chatScrollPosition.y = Mathf.Infinity;
             if (!sendToAll)
                 return;
@@ -275,7 +283,7 @@ namespace RavenM
         /// <param name="sendToAll"></param>
         public void PushCommandChatMessage(string message, Color color, bool teamOnly, bool sendToAll)
         {
-            FullChatLink += $"<color=#{ColorUtility.ToHtmlStringRGB(color)}><b>{message}</b></color>\n";
+            FullChatLink += $"<color=#{ColorUtility.ToHtmlStringRGB(color)}>{message}</color>\n";
             _chatScrollPosition.y = Mathf.Infinity;
             if (!sendToAll)
                 return;
