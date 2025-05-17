@@ -170,10 +170,16 @@ namespace RavenM.RSPatch.Wrapper
         }
         public static void AddVehiclesToNetworkPrefab()
         {
-            foreach (VehicleSpawner.VehicleSpawnType vehicleType in VehicleSpawner.ALL_VEHICLE_TYPES) {
-            
-                GameObject vehiclePrefab = VehicleSpawner.GetPrefab(0, vehicleType);
-                networkGameObjects.Add(vehiclePrefab.GetHashCode().ToString(), vehiclePrefab);
+            for (int i = 0; i < 2; i++)
+            {
+                foreach (VehicleSpawner.VehicleSpawnType vehicleType in VehicleSpawner.ALL_VEHICLE_TYPES)
+                {
+                    //GameObject vehiclePrefab = VehicleSpawner.RollPrefab(i, vehicleType, RarityTier.Common, RarityTierFallback.None, true);
+                    foreach (var vehiclePrefab in GameManager.instance.gameInfo.team[i].vehicleSlot[vehicleType].AllPrefabs())
+                    {
+                        networkGameObjects.Add(vehiclePrefab.GetHashCode().ToString(), vehiclePrefab);
+                    }
+                }
             }
             setupVehicles = true;
         }

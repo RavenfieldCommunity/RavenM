@@ -776,15 +776,15 @@ namespace RavenM
                     var teamInfo = GameManager.instance.gameInfo.team[i];
 
                     var weapons = new List<int>();
-                    foreach (var weapon in teamInfo.availableWeapons)
+                    foreach (var weapon in teamInfo.availableWeapons.All())
                     {
                         weapons.Add(weapon.nameHash);
                     }
                     string weaponString = string.Join(",", weapons.ToArray());
                     SetLobbyDataDedup(i + "weapons", weaponString);
 
-                    foreach (var vehiclePrefab in teamInfo.vehiclePrefab)
-                    {
+                    foreach (var vehiclePrefab in teamInfo.vehicleSlot)
+                    { //fixme bro
                         var type = vehiclePrefab.Key;
                         var prefab = vehiclePrefab.Value;
 
@@ -819,7 +819,7 @@ namespace RavenM
                         SetLobbyDataDedup(i + "turret_" + type, prefab == null ? "NULL" : isDefault + "," + idx);
                     }
 
-                    SetLobbyDataDedup(i + "skin", InstantActionMaps.instance.skinDropdowns[i].value.ToString());
+                    SetLobbyDataDedup(i + "skin", InstantActionMaps.instance.skinDropdowns[i].value.ToString());*/
                 }
 
                 var enabledMutators = new List<int>();
