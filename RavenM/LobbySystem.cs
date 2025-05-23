@@ -32,7 +32,11 @@ namespace RavenM
         static bool Prefix()
         {
             if (LobbySystem.instance.InLobby && !LobbySystem.instance.IsLobbyOwner && !LobbySystem.instance.ReadyToPlay)
+            {
+                LobbySystem.instance.NotificationText = "Please wait for host to start game...";
                 return false;
+            }
+            LobbySystem.instance.NotificationText = "";
             OptionsPatch.SetConfigValues(false);
 
             // Only start if all members are ready.
