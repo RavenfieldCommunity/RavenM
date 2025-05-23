@@ -547,6 +547,8 @@ public class IngameNetManager : MonoBehaviour
 
     public Vector3 MarkerPosition = Vector3.zero;
 
+    public float MarkerAppliedUntilTime = 0f;
+
     public bool UsingMicrophone = false;
 
     public Texture2D MicTexture = new Texture2D(2, 2);
@@ -659,6 +661,7 @@ public class IngameNetManager : MonoBehaviour
                     if ((hit.point - MarkerPosition).magnitude > 10)
                     {
                         MarkerPosition = hit.point;
+                        MarkerAppliedUntilTime = Time.time + 10f;
                     }
                     else
                         MarkerPosition = Vector3.zero;
@@ -799,6 +802,8 @@ public class IngameNetManager : MonoBehaviour
         }
 
         DrawMarker(MarkerPosition);
+        if (MarkerAppliedUntilTime < Time.time && MarkerPosition != Vector3.zero)
+            MarkerPosition = Vector3.zero;
         
 
         foreach (var kv in ClientActors)
