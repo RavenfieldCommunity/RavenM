@@ -66,7 +66,7 @@ namespace RavenM
             }
             catch
             {
-                Plugin.logger.LogError("Failed to initialize Discord pipe.");
+                Plugin.logger.LogWarning("Failed to initialize Discord pipe.");
                 return;
             }
             
