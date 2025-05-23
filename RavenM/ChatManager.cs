@@ -107,12 +107,20 @@ namespace RavenM
             get { return _teamChatKeybind; }
             set { _teamChatKeybind = value; }
         }
+
+        /// <summary>
+        /// Client's steam id
+        /// </summary>
         private CSteamID _steamId;
         public CSteamID SteamId
         {
             get { return _steamId; }
             set { _steamId = value; }
         }
+
+        /// <summary>
+        /// Client's steam username
+        /// </summary>
         private string _steamUsername;
         public string SteamUsername
         {
@@ -139,6 +147,7 @@ namespace RavenM
             Callback<PersonaStateChange_t>.Create(OnPersonaStateChange);
             Callback<LobbyChatMsg_t>.Create(OnLobbyChatMessage);
             Callback<LobbyChatUpdate_t>.Create(OnLobbyChatUpdate);
+            SteamUsername = SteamFriends.GetFriendPersonaName(SteamId);
         }
 
         private void OnPersonaStateChange(PersonaStateChange_t pCallback)
@@ -188,9 +197,9 @@ namespace RavenM
             {
                 var id = new CSteamID(pCallback.m_ulSteamIDUserChanged);
 
-                if (LobbySystem.instance.CurrentKickedMembers.Contains(id))
+                if (LobbySystem.instance.CurrentBannedMembers.Contains(id))
                 {
-                    SendLobbyChat($"/kick {id}");
+                    SendLobbyChat($"/ban {id}");
                 }
             }
         }
@@ -305,109 +314,198 @@ namespace RavenM
 
         // FIXME: This method should be part of the Command class
         // and split so each command handles their own backend
-        public void ProcessLobbyChatCommand(string message, ulong id, bool local)
+        public void ProcessLobbyChatCommand(string message, ulong id, bool local, Actor actor=null)
         {
-            string[] command = message.Trim().Substring(1, message.Length - 1).Split(' ');
-            string initCommand = command[0];
-            if (string.IsNullOrEmpty(initCommand))
-            {
-                return;
+            string messageTrimed = message.Trim();
+            string[] commands = messageTrimed.Substring(1, messageTrimed.Length-1).Split(' ');
+            if (commands.Length < 1) {
+                PushLobbyCommandChatMessage($"Syntax error", Color.red, false, false);
             }
+
+            string initCommand = commands[0];
+            Command cmd = CommandManager.GetCommandFromName(initCommand);
             if (!CommandManager.ContainsCommand(initCommand))
             {
-                PushLobbyCommandChatMessage($"No command with the name {initCommand} found.\nFor more information use Command /help", Color.red, false, false);
-                return;
-            }
-            Command cmd = CommandManager.GetCommandFromName(initCommand);
-            if (cmd == null)
-            {
-                Plugin.logger.LogError($"Command {initCommand} is not a registered Command!");
+                PushLobbyCommandChatMessage($"Unknown command", Color.red, false, false);
                 return;
             }
 
-            if (!cmd.AllowInLobby)
+            if (!(cmd.AllowInLobby && !GameManager.IsIngame()) && !(cmd.AllowInGame && GameManager.IsIngame()))
             {
-                PushLobbyCommandChatMessage(cmd.AllowInGame ? "This command is not allowed in the lobby!" : "This command is disabled!", Color.red, true, false);
+                PushLobbyCommandChatMessage(cmd.AllowInGame ? "This command is disabled when not in gaming" : "This command is disabled in gaming", Color.red, true, false);
                 return;
             }
 
             bool hasCommandPermission = CommandManager.HasPermission(cmd, id, local);
-            // For Commands like /help that have reqArgs[0] = null we don't have to check for arguments
-            bool hasRequiredArgs = true;
-            if (cmd.reqArgs[0] != null)
-                hasRequiredArgs = CommandManager.HasRequiredArgs(cmd, command);
-
-            switch (cmd.CommandName)
+            if (!hasCommandPermission)
             {
-                case "nametags":
+                PushCommandChatMessage("Access Denied", Color.red, false, false);
+                return;
+            }
 
+            try
+            {
+            switch (cmd.CommandName)
+                    {
+                    case "tags":
                     if (!local)
                     {
                         UI.GameUI.instance.ToggleNameTags();
-                        PushLobbyCommandChatMessage("Set nametags to " + command[1], Color.green, false, false);
-                        return;
-                    }
-                    if (!hasCommandPermission || !hasRequiredArgs)
-                        return;
-                    bool parsedArg = bool.TryParse(command[1], out bool result);
-                    if (parsedArg)
-                    {
-                        LobbySystem.instance.SetLobbyDataDedup("nameTags", result.ToString());
-                        PushLobbyCommandChatMessage("Set nameTags to " + result.ToString(), Color.green, false, false);
-                        UI.GameUI.instance.ToggleNameTags();
+                        PushLobbyCommandChatMessage("Set nametags to " + commands[1], Color.white, false, false);
+                        break;
                     }
 
-                    break;
-                case "nametagsteamonly":
-
-                    if (!local)
-                    {
+                        bool needEnable = true;
+                        bool isTeamOnly = false;
+                        string outputMessage = null;
+                        if (commands[1] == "off")
+                            needEnable = false;
+                        else if (commands[1] == "team")
+                            isTeamOnly = true;
+                        else if (commands[1] != "on")
+                        {
+                            needEnable = bool.Parse(commands[1]);
+                            outputMessage = needEnable ? "on" : "off";
+                            isTeamOnly = false;
+                        }
+                        
+                        LobbySystem.instance.SetLobbyDataDedup("nameTags", needEnable.ToString());
+                        LobbySystem.instance.SetLobbyDataDedup("nameTagsForTeamOnly", isTeamOnly.ToString());
+                        PushLobbyCommandChatMessage("Set nametags to " + outputMessage != null ? outputMessage : commands[1], Color.white, false, false);
                         UI.GameUI.instance.ToggleNameTags();
-                        PushLobbyCommandChatMessage("Set nameTags for Team only to " + command[1], Color.green, false, false);
-                        return;
-                    }
-                    if (!hasCommandPermission || !hasRequiredArgs)
-                        return;
-                    bool parsedArg2 = bool.TryParse(command[1], out bool result2);
-                    if (parsedArg2)
-                    {
-                        LobbySystem.instance.SetLobbyDataDedup("nameTagsForTeamOnly", result2.ToString());
-                        PushLobbyCommandChatMessage("Set nameTags for Team only to " + result2.ToString(), Color.green, false, false);
-                        UI.GameUI.instance.ToggleNameTags();
-                    }
 
                     break;
                 case "help":
-                    foreach (Command availableCommand in CommandManager.GetAllLobbyCommands())
+                        if (commands.Length < 2)
+                        {
+                            string availableCommandsText = "";
+                            foreach (Command availableCommand in CommandManager.GetAllCommands())
                     {
-                        PushLobbyCommandChatMessage($"{CommandManager.GetRequiredArgTypes(availableCommand)} Host Only: {availableCommand.HostOnly}", availableCommand.Scripted ? Color.green : Color.yellow, true, false);
+                                availableCommandsText = availableCommand.CommandName + " " + availableCommandsText;
+                            }
+                            PushLobbyChatMessage($"All available commands, use `/help <command>` for more details:\n  {availableCommandsText}");
+                            break;
+                        }
+
+                        bool foundCommand = false;
+                        foreach (Command command in CommandManager.GetAllCommands())
+                        {
+                            if (command.CommandName == commands[1])
+                            {
+                                PushLobbyChatMessage($"{command.SyntaxMessage}\n {command.HelpMessage}");
+                                foundCommand = true;
+                                break;
+                            }
+                        }
+                        if (!foundCommand)
+                        {
+                            PushLobbyCommandChatMessage($"Command not found", Color.red, false, false);
                     }
                     break;
-                case "kick":
-                    var userIdS = command[1];
-                    if (ulong.TryParse(userIdS, out ulong memberIdI))
+                    case "ban":
+                        if (!local)
+                        {
+                            bool targetIsClient = false;
+                            if (ulong.TryParse(commands[1], out ulong memberIdI))
                     {
                         var member = new CSteamID(memberIdI);
-                        if (member == SteamId)
+                                Plugin.logger.LogInfo(SteamId+ " "+member);
+
+                                if (member == SteamId && !LobbySystem.instance.IsLobbyOwner)
+                                    targetIsClient = true;
+                            }
+                            else
+                            {
+                                //Turn space into `_` so that substringing's result wont be error 
+                                var clientPlayerName = SteamFriends.GetFriendPersonaName(SteamId).Replace(" ", "_");
+                                Plugin.logger.LogInfo(clientPlayerName+ " " + commands[1]);
+                                if (commands[1] == clientPlayerName && !LobbySystem.instance.IsLobbyOwner)
+                                    targetIsClient = true;
+                            }
+
+                                Plugin.logger.LogInfo(targetIsClient);
+
+                            if (targetIsClient)
                         {
-                            LobbySystem.instance.NotificationText = "You were kicked from the lobby! You can no longer join this lobby.";
+                                LobbySystem.instance.NotificationText = "You were banned from the lobby!";
                             SteamMatchmaking.LeaveLobby(LobbySystem.instance.ActualLobbyID);
                         }
-                        else if (!LobbySystem.instance.CurrentKickedMembers.Contains(member))
-                        {
-                            LobbySystem.instance.CurrentKickedMembers.Add(member);
                         }
-                    }
+                        else
+                        {
+                            if (ulong.TryParse(commands[1], out ulong memberIdUlong))
+                            {
+                                var memberIda = new CSteamID(memberIdUlong);
+                                if (LobbySystem.instance.GetLobbyMembers().Contains(memberIda) && memberIda !=LobbySystem.instance.OwnerID)
+                                {
+                                    PushLobbyCommandChatMessage($"Banned {SteamFriends.GetFriendPersonaName(memberIda)} ({memberIda})", Color.white, false, true);
+                                    LobbySystem.instance.CurrentBannedMembers.Add(memberIda);
+                                }
+                                else
+                                {
+                                    PushLobbyCommandChatMessage($"Player {commands[1]} is not exist or you are banning youeself", Color.red, false, false);
+                                }
+                            }
+                            else
+                            {
+                                bool targetFound = false;
+                                foreach (var memberIdb in LobbySystem.instance.GetLobbyMembers())
+                                {
+                                    if (commands[1] == SteamFriends.GetFriendPersonaName(memberIdb) && memberIdb != LobbySystem.instance.OwnerID)
+                        {
+                                        LobbySystem.instance.CurrentBannedMembers.Add(memberIdb);
+                                        PushLobbyCommandChatMessage($"Banned {SteamFriends.GetFriendPersonaName(memberIdb)} ({memberIdb})", Color.white, false, true);
+                                        targetFound = true;
+                                        break;
+                                    }
+                                }
+                                if (!targetFound)
+                                {
+                                    PushLobbyCommandChatMessage($"Player {commands[1]} is not exist or you are banning youeself", Color.red, false, false);
+                                }
+                            }
+                        }
+                        break;
+                    case "unban":
+                        if (!local)
+                            break;
+                        var memberId = new CSteamID(ulong.Parse(commands[1]));
+                        if (LobbySystem.instance.CurrentBannedMembers.Contains(memberId))
+                        {
+                            LobbySystem.instance.CurrentBannedMembers.Remove(memberId);
+                            PushLobbyCommandChatMessage($"Unbanned {SteamFriends.GetFriendPersonaName(memberId)} ({memberId})", Color.white, false, true);
+                        }
+                        else
+                        {
+                            PushLobbyCommandChatMessage($"Player {commands[1]} is not exist or you are unbaning youeself", Color.red, false, true);
+                        }
+                    break;
+                    case "kill":
+                        string target = commands[1];
+                        Actor targetActor = CommandManager.GetActorByName(target);
+                        if (targetActor == null)
+                        {
+                            return;
+                        }
+                        targetActor.Kill(new DamageInfo(DamageInfo.DamageSourceType.FallDamage, actor, null));
+                        if(!local)
+                            PushCommandChatMessage($"Killed actor {targetActor.name}", Color.white, false, false);
                     break;
                 default:
                     // TODO: Allow other mods to handle commands from the lobby
                     Plugin.logger.LogInfo("Lobby onReceiveCommand " + initCommand);
+                        RSPatch.RavenscriptEventsManagerPatch.events.onReceiveCommand.Invoke(actor, commands, new bool[] { hasCommandPermission, true, !local });
                     break;
             }
+            }
+            catch (Exception e)
+            {
+                Plugin.logger.LogError(e.ToString());
+                if (local)
+                    PushCommandChatMessage($"{cmd.SyntaxMessage}",Color.red,false,false);
+            }
 
-            if (!cmd.Global == local)
-                return;
-
+            if (cmd.Global == true && local == true)
             SendLobbyChat(message);
         }
 
@@ -423,127 +521,8 @@ namespace RavenM
         // and split so each command handles their own backend
         public void ProcessChatCommand(string message, Actor actor, ulong id, bool local)
         {
-            string[] command = message.Trim().Substring(1, message.Length - 1).Split(' ');
-            string initCommand = command[0];
-            if (string.IsNullOrEmpty(initCommand))
-            {
+            ProcessLobbyChatCommand(message,id,local,actor);
                 return;
-            }
-            if (!CommandManager.ContainsCommand(initCommand))
-            {
-                PushCommandChatMessage($"No Command with name {initCommand} found.\nFor more information use Command /help", Color.red, false, false);
-                return;
-            }
-            Command cmd = CommandManager.GetCommandFromName(initCommand);
-            if (cmd == null)
-            {
-                Plugin.logger.LogError($"Command {initCommand} is not a registered Command!");
-                return;
-            }
-            bool hasCommandPermission = CommandManager.HasPermission(cmd, id, local);
-            // For Commands like /help that have reqArgs[0] = null we don't have to check for arguments
-            bool hasRequiredArgs = true;
-            if (cmd.reqArgs[0] != null)
-                hasRequiredArgs = CommandManager.HasRequiredArgs(cmd, command);
-            switch (cmd.CommandName)
-            {
-                case "nametags":
-
-                    if (!local)
-                    {
-                        UI.GameUI.instance.ToggleNameTags();
-                        PushCommandChatMessage("Set nametags to " + command[1], Color.green, false, false);
-                        return;
-                    }
-                    if (!hasCommandPermission || !hasRequiredArgs)
-                        return;
-                    bool parsedArg = bool.TryParse(command[1], out bool result);
-                    if (parsedArg)
-                    {
-                        LobbySystem.instance.SetLobbyDataDedup("nameTags", result.ToString());
-                        PushCommandChatMessage("Set nameTags to " + result.ToString(), Color.green, false, false);
-                        UI.GameUI.instance.ToggleNameTags();
-                    }
-
-                    break;
-                case "nametagsteamonly":
-
-                    if (!local)
-                    {
-                        UI.GameUI.instance.ToggleNameTags();
-                        PushCommandChatMessage("Set nameTags for Team only to " + command[1], Color.green, false, false);
-                        return;
-                    }
-                    if (!hasCommandPermission || !hasRequiredArgs)
-                        return;
-                    bool parsedArg2 = bool.TryParse(command[1], out bool result2);
-                    if (parsedArg2)
-                    {
-                        LobbySystem.instance.SetLobbyDataDedup("nameTagsForTeamOnly", result2.ToString());
-                        PushCommandChatMessage("Set nameTags for Team only to " + result2.ToString(), Color.green, false, false);
-                        UI.GameUI.instance.ToggleNameTags();
-                    }
-
-                    break;
-                case "help":
-                    foreach (Command availableCommand in CommandManager.GetAllIngameCommands())
-                    {
-                        PushCommandChatMessage($"{CommandManager.GetRequiredArgTypes(availableCommand)} Host Only: {availableCommand.HostOnly}", availableCommand.Scripted ? Color.green : Color.yellow, true, false);
-                    }
-                    break;
-                case "kill":
-                    if (!hasCommandPermission || !hasRequiredArgs)
-                        return;
-                    string target = command[1];
-                    Actor targetActor = CommandManager.GetActorByName(target);
-                    if (targetActor == null)
-                    {
-                        return;
-                    }
-                    targetActor.Kill(new DamageInfo(DamageInfo.DamageSourceType.FallDamage, actor, null));
-                    PushCommandChatMessage($"Killed actor {targetActor.name}", Color.green, false, false);
-                    break;
-                case "kick":
-                    var userIdS = command[1];
-                    if (ulong.TryParse(userIdS, out ulong memberIdI))
-                    {
-                        var member = new CSteamID(memberIdI);
-                        if (member == SteamId)
-                        {
-                            LobbySystem.instance.NotificationText = "You were kicked from the lobby! You can no longer join this lobby.";
-                            SteamMatchmaking.LeaveLobby(LobbySystem.instance.ActualLobbyID);
-                        }
-                        else if (!LobbySystem.instance.CurrentKickedMembers.Contains(member))
-                        {
-                            LobbySystem.instance.CurrentKickedMembers.Add(member);
-                        }
-                    }
-                    break;
-                default:
-                    // If it's not build in command pass it to RS
-                    Plugin.logger.LogInfo("Ingame onReceiveCommand " + initCommand);
-                    RSPatch.RavenscriptEventsManagerPatch.events.onReceiveCommand.Invoke(actor, command, new bool[] { hasCommandPermission, hasRequiredArgs, !local });
-                    break;
-            }
-
-            if (!cmd.Global == local)
-                return;
-
-            using MemoryStream memoryStream = new MemoryStream();
-            var chatCommandPacket = new ChatCommandPacket
-            {
-                Id = ActorManager.instance.player.GetComponent<GuidComponent>().guid,
-                SteamID = SteamId.m_SteamID,
-                Command = CurrentChatMessage,
-                Scripted = cmd.Scripted,
-            };
-
-            using (var writer = new ProtocolWriter(memoryStream))
-            {
-                writer.Write(chatCommandPacket);
-            }
-            byte[] data = memoryStream.ToArray();
-            IngameNetManager.instance.SendPacketToServer(data, PacketType.ChatCommand, Constants.k_nSteamNetworkingSend_Reliable);
         }
 
         /// <summary>
@@ -607,24 +586,18 @@ namespace RavenM
                 {
                     if (!string.IsNullOrEmpty(CurrentChatMessage))
                     {
-                        bool isCommand = CurrentChatMessage.Trim().StartsWith("/") ? true : false;
+                        var currentChatMessageTrimed = CurrentChatMessage.Trim();
+                        bool isCommand = currentChatMessageTrimed.StartsWith("/") | currentChatMessageTrimed.StartsWith("、")  ? true : false;
                         if (isCommand)
                         {
-                            if (isLobbyChat)
-                            {
-                                ProcessLobbyChatCommand(CurrentChatMessage, SteamId.m_SteamID, true);
-                            }
-                            else
-                            {
-                                ProcessChatCommand(CurrentChatMessage, ActorManager.instance.player, SteamId.m_SteamID, true);
-                            }
-
+                            ProcessLobbyChatCommand(CurrentChatMessage.Replace("、","/"), SteamId.m_SteamID, true);
                             CurrentChatMessage = string.Empty;
                         }
                         else
                         {
                             if (isLobbyChat)
                             {
+                                Plugin.logger.LogInfo($"{CurrentChatMessage}{SteamUsername}");
                                 PushLobbyChatMessage(CurrentChatMessage, SteamUsername);
                                 SendLobbyChat(CurrentChatMessage);
                             }
