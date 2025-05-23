@@ -120,7 +120,7 @@ namespace RavenM
                                                                 "The mutators in the folder will be added automatically as Build In Mutators, this is for testing mutators without having to start the game with mods.");
             showBuildGUID = Config.Bind("General.Toggles",
                 "Show GUID",
-                false,
+                true,
                 "Show GUID on screen.").Value;
             chatWidth = Config.Bind("General.ChatField",
                 "Chat Width",
@@ -162,7 +162,6 @@ namespace RavenM
                     Logger.LogError($"Directory {customBuildInMutators} could not be found.");
                 }
                 customBuildInMutators = "NOT_REAL";
-                Logger.LogError($"Directory {customBuildInMutators} could not be found.");
             }
             var harmony = new Harmony("patch.ravenm");
             try
@@ -195,7 +194,7 @@ namespace RavenM
 
             if (GameManager.instance != null && GameManager.instance.buildNumber != EXPECTED_BUILD_NUMBER) 
             {
-                GUI.Label(new Rect(10, Screen.height - 60, 300, 40), $"<color=red>RavenM is not compatible with this version of the game. Expected EA{EXPECTED_BUILD_NUMBER}, got EA{GameManager.instance.buildNumber}.</color>");
+                GUI.Label(new Rect(10, Screen.height - 60, 300, 40), $"<color=yellow>RavenM is not compatible with this version of the game. Expected EA{EXPECTED_BUILD_NUMBER}, got EA{GameManager.instance.buildNumber}.</color>");
             }
         }
         public void printConsole(string message)
