@@ -169,7 +169,7 @@ namespace RavenM
             {
                 if (chat.StartsWith("/") && user == LobbySystem.instance.OwnerID)
                 {
-                    ProcessLobbyChatCommand(chat, SteamId.m_SteamID, true);
+                    ProcessLobbyChatCommand(chat, SteamId.m_SteamID, false);
                 }
                 else
                 {
