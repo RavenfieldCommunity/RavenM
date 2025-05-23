@@ -30,7 +30,7 @@ namespace RavenM
                 {
                     return;
                 }
-                keybindConfig = new ConfigFile(System.IO.Path.Combine(Paths.ConfigPath, "RavenMSettings.cfg"), false);
+                keybindConfig = Plugin.config;
                 CreateToggleOption("Show RavenM HUD", true, RavenMOptions.ShowRavenMHUD);
                 CreateSliderOption("Voice Chat Volume", 1f, RavenMOptions.VoiceChatVolume,false,0f,1f);
                 CreateDropdownOption("Chat Position", RavenMOptions.ChatPosition, ChatManager.instance.ChatPositionOptions, 0);
@@ -191,7 +191,7 @@ namespace RavenM
                 return;
             }
             RectTransform target = Options.instance.gameOptions.transform.Find("Game Panel/Scroll View/Viewport/Content").GetComponent<RectTransform>();
-            ConfigEntry<float> ravenMConfig = keybindConfig.Bind("RavenMKeybinds", option.ToString(), defaultValue);
+            ConfigEntry<float> ravenMConfig = keybindConfig.Bind("General.Keybinds", option.ToString(), defaultValue);
             RectTransform exampleSettingSlider = Options.instance.gameOptions.transform.Find("Game Panel/Scroll View/Viewport/Content/SFX Volume").GetComponent<RectTransform>();
             if(label)
                 exampleSettingSlider = Options.instance.gameOptions.transform.Find("Game Panel/Scroll View/Viewport/Content/Field Of View").GetComponent<RectTransform>();
@@ -221,7 +221,7 @@ namespace RavenM
                 return;
             }
             RectTransform target = Options.instance.gameOptions.transform.Find("Game Panel/Scroll View/Viewport/Content").GetComponent<RectTransform>();
-            ConfigEntry<bool> ravenMConfig = keybindConfig.Bind("RavenMKeybinds", option.ToString(), defaultValue);
+            ConfigEntry<bool> ravenMConfig = keybindConfig.Bind("General.Keybinds", option.ToString(), defaultValue);
             RectTransform exampleSettingToggle = Options.instance.gameOptions.transform.Find("Game Panel/Scroll View/Viewport/Content/Hitmarkers").GetComponent<RectTransform>();
             GameObject newTarget = GameObject.Instantiate(exampleSettingToggle.gameObject, target);
             newTarget.GetComponent<Text>().text = name;
@@ -243,7 +243,7 @@ namespace RavenM
             }
             
             RectTransform target = Options.instance.gameOptions.transform.Find("Game Panel/Scroll View/Viewport/Content").GetComponent<RectTransform>();
-            ConfigEntry<int> ravenMConfig = keybindConfig.Bind("RavenMKeybinds", option.ToString(), defaultValueId);
+            ConfigEntry<int> ravenMConfig = keybindConfig.Bind("General.Keybinds", option.ToString(), defaultValueId);
             RectTransform exampleSettingDropdown = Options.instance.gameOptions.transform.Find("Game Panel/Scroll View/Viewport/Content/Difficulty").GetComponent<RectTransform>();
             GameObject newTarget = GameObject.Instantiate(exampleSettingDropdown.gameObject, target);
             newTarget.GetComponent<Text>().text = name;
@@ -304,12 +304,12 @@ namespace RavenM
         private static void AddKeybindToConfig(KeyCode defaultKeyCode, OptionKeybind keybind)
         {
             // Probably not a good idea
-            setKeybinds.Add(keybind, keybindConfig.Bind("RavenMKeybinds", keybind.ToString(), defaultKeyCode));
+            setKeybinds.Add(keybind, keybindConfig.Bind("General.Keybinds", keybind.ToString(), defaultKeyCode));
         }
         private static void AddTextToConfig(string defaultText, OptionText text)
         {
             // Probably not a good idea
-            setOptionText.Add(text, keybindConfig.Bind("RavenMColors", text.ToString(), defaultText));
+            setOptionText.Add(text, keybindConfig.Bind("General.Colors", text.ToString(), defaultText));
         }
         public abstract class RavenMOption<T, U> : MonoBehaviour
         {
@@ -323,7 +323,7 @@ namespace RavenM
 
             public T uiElement;
 
-            private string sectionName = "RavenMKeybinds";
+            private string sectionName = "General.Keybinds";
 
             public ConfigEntry<U> configEntry;
             public virtual void Start()
