@@ -165,9 +165,12 @@ namespace RavenM
                 Logger.LogError($"Directory {customBuildInMutators} could not be found.");
             }
             var harmony = new Harmony("patch.ravenm");
-            try {
-                harmony.PatchAll( Assembly.GetAssembly( typeof(LobbySystem) ) );
-            } catch (Exception e) {
+            try
+            {
+                harmony.PatchAll(Assembly.GetAssembly(this.GetType()));
+            }
+            catch (Exception e)
+            {
                 Logger.LogError($"Failed to patch: {e}");
             }
 
