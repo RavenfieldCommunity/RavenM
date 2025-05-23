@@ -93,8 +93,8 @@ namespace RavenM
 
             for (int i = 0; i < args.Length; i++)
             {
-                if (args[i] == "-noravenm") 
-                { 
+                if (args[i] == "-noravenm")
+                {
                     Logger.LogWarning($"Plugin {PluginInfo.PLUGIN_GUID} is canceled to load!");
                     throw new Exception("Cancel load");
                 }
@@ -159,7 +159,7 @@ namespace RavenM
             } catch (Exception e) {
                 Logger.LogError($"Failed to patch: {e}");
             }
-            
+
             foreach (var argument in args)
             {
                 if (argument.Contains("="))

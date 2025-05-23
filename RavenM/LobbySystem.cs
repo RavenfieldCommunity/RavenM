@@ -12,6 +12,7 @@ using Ravenfield.Mutator.Configuration;
 using SimpleJSON;
 using System.Globalization;
 using Ravenfield.Trigger;
+using UnityEngine.UI;
 
 namespace RavenM
 {
@@ -411,7 +412,8 @@ namespace RavenM
             return ret;
         }
 
-        public void SetLobbyDataDedup(string key, string value) {
+        public void SetLobbyDataDedup(string key, string value)
+        {
             if (!InLobby || !LobbyDataReady || !IsLobbyOwner)
                 return;
 
@@ -423,7 +425,8 @@ namespace RavenM
             LobbySetCache[key] = new Tuple<String, float>(value, Time.time + SET_DEADLINE);
         }
 
-        public void SetLobbyMemberDataDedup(string key, string value) {
+        public void SetLobbyMemberDataDedup(string key, string value)
+        {
             if (!InLobby || !LobbyDataReady)
                 return;
 

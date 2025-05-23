@@ -30,7 +30,7 @@ namespace RavenM
             set { _currentChatMessage = value; }
         }
         private string _fullChatLink = string.Empty;
-        
+
         /// <summary>
         /// The full chat transcript
         /// </summary>
@@ -79,7 +79,7 @@ namespace RavenM
             set { _typeIntention = value; }
         }
         private bool _chatMode = false;
-        
+
         /// <summary>
         /// If true, chat message is global.
         /// If false, chat message is team only.
@@ -314,11 +314,12 @@ namespace RavenM
 
         // FIXME: This method should be part of the Command class
         // and split so each command handles their own backend
-        public void ProcessLobbyChatCommand(string message, ulong id, bool local, Actor actor=null)
+        public void ProcessLobbyChatCommand(string message, ulong id, bool local, Actor actor = null)
         {
             string messageTrimed = message.Trim();
-            string[] commands = messageTrimed.Substring(1, messageTrimed.Length-1).Split(' ');
-            if (commands.Length < 1) {
+            string[] commands = messageTrimed.Substring(1, messageTrimed.Length - 1).Split(' ');
+            if (commands.Length < 1)
+            {
                 PushLobbyCommandChatMessage($"Syntax error", Color.red, false, false);
             }
 
@@ -345,15 +346,15 @@ namespace RavenM
 
             try
             {
-            switch (cmd.CommandName)
-                    {
+                switch (cmd.CommandName)
+                {
                     case "tags":
-                    if (!local)
-                    {
-                        UI.GameUI.instance.ToggleNameTags();
-                        PushLobbyCommandChatMessage("Set nametags to " + commands[1], Color.white, false, false);
-                        break;
-                    }
+                        if (!local)
+                        {
+                            UI.GameUI.instance.ToggleNameTags();
+                            PushLobbyCommandChatMessage("Set nametags to " + commands[1], Color.white, false, false);
+                            break;
+                        }
 
                         bool needEnable = true;
                         bool isTeamOnly = false;
@@ -368,19 +369,19 @@ namespace RavenM
                             outputMessage = needEnable ? "on" : "off";
                             isTeamOnly = false;
                         }
-                        
+
                         LobbySystem.instance.SetLobbyDataDedup("nameTags", needEnable.ToString());
                         LobbySystem.instance.SetLobbyDataDedup("nameTagsForTeamOnly", isTeamOnly.ToString());
                         PushLobbyCommandChatMessage("Set nametags to " + outputMessage != null ? outputMessage : commands[1], Color.white, false, false);
                         UI.GameUI.instance.ToggleNameTags();
 
-                    break;
-                case "help":
+                        break;
+                    case "help":
                         if (commands.Length < 2)
                         {
                             string availableCommandsText = "";
                             foreach (Command availableCommand in CommandManager.GetAllCommands())
-                    {
+                            {
                                 availableCommandsText = availableCommand.CommandName + " " + availableCommandsText;
                             }
                             PushLobbyChatMessage($"All available commands, use `/help <command>` for more details:\n  {availableCommandsText}");
@@ -400,16 +401,16 @@ namespace RavenM
                         if (!foundCommand)
                         {
                             PushLobbyCommandChatMessage($"Command not found", Color.red, false, false);
-                    }
-                    break;
+                        }
+                        break;
                     case "ban":
                         if (!local)
                         {
                             bool targetIsClient = false;
                             if (ulong.TryParse(commands[1], out ulong memberIdI))
-                    {
-                        var member = new CSteamID(memberIdI);
-                                Plugin.logger.LogInfo(SteamId+ " "+member);
+                            {
+                                var member = new CSteamID(memberIdI);
+                                Plugin.logger.LogInfo(SteamId + " " + member);
 
                                 if (member == SteamId && !LobbySystem.instance.IsLobbyOwner)
                                     targetIsClient = true;
@@ -418,25 +419,25 @@ namespace RavenM
                             {
                                 //Turn space into `_` so that substringing's result wont be error 
                                 var clientPlayerName = SteamFriends.GetFriendPersonaName(SteamId).Replace(" ", "_");
-                                Plugin.logger.LogInfo(clientPlayerName+ " " + commands[1]);
+                                Plugin.logger.LogInfo(clientPlayerName + " " + commands[1]);
                                 if (commands[1] == clientPlayerName && !LobbySystem.instance.IsLobbyOwner)
                                     targetIsClient = true;
                             }
 
-                                Plugin.logger.LogInfo(targetIsClient);
+                            Plugin.logger.LogInfo(targetIsClient);
 
                             if (targetIsClient)
-                        {
+                            {
                                 LobbySystem.instance.NotificationText = "You were banned from the lobby!";
-                            SteamMatchmaking.LeaveLobby(LobbySystem.instance.ActualLobbyID);
-                        }
+                                SteamMatchmaking.LeaveLobby(LobbySystem.instance.ActualLobbyID);
+                            }
                         }
                         else
                         {
                             if (ulong.TryParse(commands[1], out ulong memberIdUlong))
                             {
                                 var memberIda = new CSteamID(memberIdUlong);
-                                if (LobbySystem.instance.GetLobbyMembers().Contains(memberIda) && memberIda !=LobbySystem.instance.OwnerID)
+                                if (LobbySystem.instance.GetLobbyMembers().Contains(memberIda) && memberIda != LobbySystem.instance.OwnerID)
                                 {
                                     PushLobbyCommandChatMessage($"Banned {SteamFriends.GetFriendPersonaName(memberIda)} ({memberIda})", Color.white, false, true);
                                     LobbySystem.instance.CurrentBannedMembers.Add(memberIda);
@@ -452,7 +453,7 @@ namespace RavenM
                                 foreach (var memberIdb in LobbySystem.instance.GetLobbyMembers())
                                 {
                                     if (commands[1] == SteamFriends.GetFriendPersonaName(memberIdb) && memberIdb != LobbySystem.instance.OwnerID)
-                        {
+                                    {
                                         LobbySystem.instance.CurrentBannedMembers.Add(memberIdb);
                                         PushLobbyCommandChatMessage($"Banned {SteamFriends.GetFriendPersonaName(memberIdb)} ({memberIdb})", Color.white, false, true);
                                         targetFound = true;
@@ -479,7 +480,7 @@ namespace RavenM
                         {
                             PushLobbyCommandChatMessage($"Player {commands[1]} is not exist or you are unbaning youeself", Color.red, false, true);
                         }
-                    break;
+                        break;
                     case "kill":
                         string target = commands[1];
                         Actor targetActor = CommandManager.GetActorByName(target);
@@ -488,25 +489,25 @@ namespace RavenM
                             return;
                         }
                         targetActor.Kill(new DamageInfo(DamageInfo.DamageSourceType.FallDamage, actor, null));
-                        if(!local)
+                        if (!local)
                             PushCommandChatMessage($"Killed actor {targetActor.name}", Color.white, false, false);
-                    break;
-                default:
-                    // TODO: Allow other mods to handle commands from the lobby
-                    Plugin.logger.LogInfo("Lobby onReceiveCommand " + initCommand);
+                        break;
+                    default:
+                        // TODO: Allow other mods to handle commands from the lobby
+                        Plugin.logger.LogInfo("Lobby onReceiveCommand " + initCommand);
                         RSPatch.RavenscriptEventsManagerPatch.events.onReceiveCommand.Invoke(actor, commands, new bool[] { hasCommandPermission, true, !local });
-                    break;
-            }
+                        break;
+                }
             }
             catch (Exception e)
             {
                 Plugin.logger.LogError(e.ToString());
                 if (local)
-                    PushCommandChatMessage($"{cmd.SyntaxMessage}",Color.red,false,false);
+                    PushCommandChatMessage($"{cmd.SyntaxMessage}", Color.red, false, false);
             }
 
             if (cmd.Global == true && local == true)
-            SendLobbyChat(message);
+                SendLobbyChat(message);
         }
 
         /// <summary>
@@ -516,13 +517,13 @@ namespace RavenM
         /// <param name="actor"></param>
         /// <param name="id"></param>
         /// <param name="local"></param>
-        
+
         // FIXME: This method should be part of the Command class
         // and split so each command handles their own backend
         public void ProcessChatCommand(string message, Actor actor, ulong id, bool local)
         {
-            ProcessLobbyChatCommand(message,id,local,actor);
-                return;
+            ProcessLobbyChatCommand(message, id, local, actor);
+            return;
         }
 
         /// <summary>
@@ -587,10 +588,10 @@ namespace RavenM
                     if (!string.IsNullOrEmpty(CurrentChatMessage))
                     {
                         var currentChatMessageTrimed = CurrentChatMessage.Trim();
-                        bool isCommand = currentChatMessageTrimed.StartsWith("/") | currentChatMessageTrimed.StartsWith("、")  ? true : false;
+                        bool isCommand = currentChatMessageTrimed.StartsWith("/") | currentChatMessageTrimed.StartsWith("、") ? true : false;
                         if (isCommand)
                         {
-                            ProcessLobbyChatCommand(CurrentChatMessage.Replace("、","/"), SteamId.m_SteamID, true);
+                            ProcessLobbyChatCommand(CurrentChatMessage.Replace("、", "/"), SteamId.m_SteamID, true);
                             CurrentChatMessage = string.Empty;
                         }
                         else
@@ -611,7 +612,7 @@ namespace RavenM
                                 // {
                                 //     SendLobbyChat(CurrentChatMessage);
                                 // }
-                                
+
                                 using MemoryStream memoryStream = new MemoryStream();
                                 var chatPacket = new ChatPacket
                                 {
@@ -667,13 +668,13 @@ namespace RavenM
 
             var chatStyle = new GUIStyle();
             chatStyle.normal.background = GreyBackground;
-            
+
             var textStyle = new GUIStyle();
             textStyle.wordWrap = wordWrap;
             textStyle.normal.textColor = Color.white;
             if (!wordWrap)
                 textStyle.wordWrap = false;
-                
+
             GUILayout.BeginArea(new Rect(chatXOffset, Screen.height - chatYOffset, chatWidth, chatHeight), string.Empty, chatStyle);
             GUILayout.BeginVertical();
             GUILayout.Space(10);
@@ -687,7 +688,7 @@ namespace RavenM
             GUILayout.Space(10);
             GUILayout.EndVertical();
             GUILayout.EndArea();
-            
+
             if (resetScrollPosition)
             {
                 _chatScrollPosition.y = Mathf.Infinity;
