@@ -268,7 +268,7 @@ namespace RavenM
         /// <param name="sendToAll"></param>
         public void PushLobbyCommandChatMessage(string message, Color color, bool teamOnly, bool sendToAll)
         {
-            FullChatLink += $"<color=#{ColorUtility.ToHtmlStringRGB(color)}><b>{message}</b></color>\n";
+            FullChatLink += $"<color=#{ColorUtility.ToHtmlStringRGB(color)}>{message}</color>\n";
             _chatScrollPosition.y = Mathf.Infinity;
             if (!sendToAll)
                 return;
@@ -284,7 +284,7 @@ namespace RavenM
         /// <param name="sendToAll"></param>
         public void PushCommandChatMessage(string message, Color color, bool teamOnly, bool sendToAll)
         {
-            FullChatLink += $"<color=#{ColorUtility.ToHtmlStringRGB(color)}><b>{message}</b></color>\n";
+            FullChatLink += $"<color=#{ColorUtility.ToHtmlStringRGB(color)}>{message}</color>\n";
             _chatScrollPosition.y = Mathf.Infinity;
             if (!sendToAll)
                 return;
