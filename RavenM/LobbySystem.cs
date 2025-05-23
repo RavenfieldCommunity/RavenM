@@ -761,7 +761,7 @@ namespace RavenM
                     SetLobbyDataDedup("team", InstantActionMaps.instance.teamDropdown.value.ToString());
                 }
 
-                if (InstantActionMaps.instance.mapDropdown.value == customMapOptionIndex)
+                if (InstantActionMaps.instance.mapDropdown.value == customMapOptionIndex && entries != null)
                 {
                     SetLobbyDataDedup("customMap", entries[customMapOptionIndex].metaData.displayName);
                 }
