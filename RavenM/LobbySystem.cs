@@ -1134,7 +1134,7 @@ namespace RavenM
                     if (GUILayout.Button("JOIN"))
                         GUIStack.Push("Join");
 
-                    GUILayout.Label($"RavenM v{PluginInfo.PLUGIN_VERSION}\nUnmerged patch 3");
+                    GUILayout.Label($"RavenM v{MyPluginInfo.PLUGIN_VERSION}\nUnmerged patch 4");
                     if (GUILayout.Button("Project webpage"))
                         Application.OpenURL("https://ravenfieldcommunity.github.io/docs/en/Projects/ravenm.html");
                 }
