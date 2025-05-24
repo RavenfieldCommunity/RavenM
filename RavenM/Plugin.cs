@@ -42,6 +42,8 @@ namespace RavenM
 
         public bool FirstSteamworksInit = false;
 
+        public bool HasGotGameBuildNumber = false;
+
         public static Plugin instance = null;
 
         public static BepInEx.Logging.ManualLogSource logger = null;
@@ -54,6 +56,8 @@ namespace RavenM
         public static List<string> customMutatorsDirectories = new List<string>();
 
         public static bool JoinedLobbyFromArgument = false;
+
+        public static int currentGameBuildNumber = 0;
         public static Dictionary<string, string> Arguments = new Dictionary<string, string>();
 
         public static string BuildGUID
@@ -62,11 +66,11 @@ namespace RavenM
             {
                 if (!changeGUID)
                 {
-                    return $"INDEV-0-7-{Assembly.GetExecutingAssembly().ManifestModule.ModuleVersionId.ToString().Split('-').Last()}";
+                    return $"INDEV-EA{(currentGameBuildNumber == 0 ? 0 : currentGameBuildNumber)}-{MyPluginInfo.PLUGIN_VERSION.Replace(".","-")}-{Assembly.GetExecutingAssembly().ManifestModule.ModuleVersionId.ToString().Split('-').Last()}";
                 }
                 else
                 {
-                    return "WARNING-TESTING-MODE-89a27d9e2fcb";
+                    return $"TESTMODE-EA{(currentGameBuildNumber == 0 ? 0 : currentGameBuildNumber)}-{MyPluginInfo.PLUGIN_VERSION.Replace(".","-")}-89a27d9e2fcb";
                 }
             }
         }
@@ -227,6 +231,9 @@ namespace RavenM
                 discordObject.AddComponent<DiscordIntegration>();
                 DontDestroyOnLoad(discordObject);
             }
+            else if (!HasGotGameBuildNumber)
+                if ( GameManager.instance != null)
+                    currentGameBuildNumber = GameManager.instance.buildNumber;
             else if (!JoinedLobbyFromArgument && Arguments.ContainsKey("-ravenm-lobby"))
             {
                 JoinLobbyFromArgument();
