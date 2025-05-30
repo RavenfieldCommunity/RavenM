@@ -134,6 +134,7 @@ namespace RavenM.Commands
         }
         public bool HasRequiredArgs(Command cmd, string[] command)
         {
+            // TODO: is args check needed? as there will be a bug when there are optional args, i think try and catch block is enough
             return true;
             // Shift Array by one to the right because command[0] would be the initCommand  - Chryses
             string[] args = new string[command.Length - 1];
