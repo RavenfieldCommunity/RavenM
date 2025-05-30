@@ -317,6 +317,7 @@ namespace RavenM
         public void ProcessLobbyChatCommand(string message, ulong id, bool local, Actor actor = null)
         {
             string messageTrimed = message.Trim();
+            bool hasCommmandSent = false;
             string[] commands = messageTrimed.Substring(1, messageTrimed.Length - 1).Split(' ');
             if (commands.Length < 1)
             {
@@ -456,6 +457,9 @@ namespace RavenM
                                     {
                                         LobbySystem.instance.CurrentBannedMembers.Add(memberIdb);
                                         PushLobbyCommandChatMessage($"Banned {SteamFriends.GetFriendPersonaName(memberIdb)} ({memberIdb})", Color.white, false, true);
+                                        // lol steam sometime wnot sync player's nickname, so sending the user id is better
+                                        SendLobbyChat($"/ban {memberIdb}");
+                                        hasCommmandSent = true;
                                         targetFound = true;
                                         break;
                                     }
@@ -506,7 +510,7 @@ namespace RavenM
                     PushCommandChatMessage($"{cmd.SyntaxMessage}", Color.red, false, false);
             }
 
-            if (cmd.Global == true && local == true)
+            if (cmd.Global == true && local == true && !hasCommmandSent)
                 SendLobbyChat(message);
         }
 
