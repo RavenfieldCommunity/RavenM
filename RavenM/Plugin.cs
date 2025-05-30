@@ -195,11 +195,6 @@ namespace RavenM
         private void OnGUI()
         {
             if (showBuildGUID) GUI.Label(new Rect(10, Screen.height - 20, 400, 40), $"RavenM ID: {BuildGUID}");
-
-            if (GameManager.instance != null && GameManager.instance.buildNumber != EXPECTED_BUILD_NUMBER) 
-            {
-                GUI.Label(new Rect(10, Screen.height - 60, 300, 40), $"<color=yellow>RavenM is not compatible with this version of the game. Expected EA{EXPECTED_BUILD_NUMBER}, got EA{GameManager.instance.buildNumber}.</color>");
-            }
         }
         public void printConsole(string message)
         {
@@ -238,6 +233,8 @@ namespace RavenM
             {
                 JoinLobbyFromArgument();
             }
+            else if (showBuildGUID)
+                this.enabled=false;
         }
 
         void JoinLobbyFromArgument()
