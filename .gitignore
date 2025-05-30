@@ -399,3 +399,6 @@ FodyWeavers.xsd
 
 # Mac
 .DS_Store
+
+# Ignore csproj and a temporary note so that the output path wnot be push to remote repo automatically
+RavenM/RavenM.csproj
