@@ -77,6 +77,26 @@ namespace RavenM
         }
     }
 
+    // TODO: another better way??
+    [HarmonyPatch]
+    public class SquadLeaderKitPatch
+    {
+        [HarmonyPatch(typeof(SquadLeaderKit), "Fire")]
+        [HarmonyPatch(typeof(SquadLeaderKit), "Update")]
+        [HarmonyPatch(typeof(SquadLeaderKit), "Unholster")]
+        [HarmonyPatch(typeof(SquadLeaderKit), "Holster")]
+        [HarmonyPrefix]
+        static bool Fire(SquadLeaderKit __instance)
+        {
+            if (!IngameNetManager.instance.IsClient)
+                return true;
+            if (__instance.user == FpsActorController.instance.actor)
+                return true;
+            return false;
+        }
+    }
+    
+
     /// <summary>
     /// An ActorController for Actors controlled by a remote client. Nothing fancy, just copying
     /// the method results of the actual ActorController on the other end.
