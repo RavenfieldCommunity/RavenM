@@ -126,7 +126,7 @@ namespace RavenM.RSPatch
         {
             if (Plugin.addToBuiltInMutators)
             {
-                foreach (MutatorEntry entry in __instance.loadedMutators)
+                foreach (MutatorEntryData entry in __instance.loadedMutators)
                 {
                     if (!__instance.builtInMutators.Contains(entry))
                     {

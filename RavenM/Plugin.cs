@@ -75,7 +75,7 @@ namespace RavenM
             }
         }
 
-        public static readonly int EXPECTED_BUILD_NUMBER = 31;
+        public static readonly int EXPECTED_BUILD_NUMBER = 32;
 
         private ConfigEntry<bool> configRavenMDevMod;
         private bool showBuildGUID;

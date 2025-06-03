@@ -14,6 +14,7 @@ using System.Globalization;
 using Ravenfield.Trigger;
 using UnityEngine.UI;
 using System.Threading.Tasks;
+using TMPro;
 
 namespace RavenM
 {
@@ -210,9 +211,55 @@ namespace RavenM
     {
         static bool Prefix()
         {
-            if (LobbySystem.instance.InLobby && (int)typeof(MainMenu).GetField("page", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(MainMenu.instance) == MainMenu.PAGE_INSTANT_ACTION)
-                return false;
+            //if (LobbySystem.instance.InLobby && (int)typeof(MainMenu).GetField("page", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(MainMenu.instance) == MainMenu.PAGE_INSTANT_ACTION)
+            //    return false;
 
+            return true;
+        }
+    }
+
+    [HarmonyPatch(typeof(InstantActionConfigMenu), "SetGameMode")]   
+    public class SetGameModePatch
+    {
+        static void Postfix(GameObject prefab)
+        {
+            LobbySystem.instance.currentGameMode = prefab.GetComponent<GameModeBase>().gameModeType;
+        }
+    }
+
+
+    [HarmonyPatch]
+
+    public class ModConfigPatch
+    {
+        [HarmonyPatch(typeof(VehicleEntryObject), "Select")]
+        [HarmonyPatch(typeof(SkinEntryObject), "Select")]
+        [HarmonyPatch(typeof(WeaponEntryObject), "Select")]
+        [HarmonyPatch(typeof(GameModeEntryObject), "Select")]
+        [HarmonyPatch(typeof(MapEntryObject), "Select")]
+        [HarmonyPatch(typeof(VehicleEntryObject), "ChangeRarityTier")]
+        [HarmonyPatch(typeof(WeaponEntryObject), "ChangeRarityTier")]
+        [HarmonyPatch(typeof(InstantActionConfigMenu), "LoadGameConfiguration")]
+        [HarmonyPatch(typeof(InstantActionConfigMenu), "SelectGameConfiguration")]
+        [HarmonyPrefix]
+        public static bool Prefix()
+        {
+            if (!LobbySystem.instance.InLobby)
+            {
+                Plugin.logger.LogInfo("Non-lobby state, skip!");
+                return true;
+            }
+            if (LobbySystem.instance.IsLobbyOwner)
+            {
+                Plugin.logger.LogInfo("Mod config changed!");
+                LobbySystem.instance.isListChanged = true;
+                return true;
+            }
+            else if (!LobbySystem.instance.isChangingList)
+            {
+                Plugin.logger.LogInfo("Mod config blocked!");
+                return false;
+            }
             return true;
         }
     }
@@ -228,11 +275,18 @@ namespace RavenM
     {
         static void Postfix()
         {
-            if (InstantActionMaps.instance != null)
+            /*if (InstantActionMaps.instance != null)
             {
                 // We need to update the skin dropdown with the new mods.
                 typeof(InstantActionMaps).GetMethod("SetupSkinList", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(InstantActionMaps.instance, null);
-            }
+            }*/
+            // Skin
+            Plugin.logger.LogInfo("OnAfterModsLoaded");
+            ModManager.instance.actorSkins.Sort((x, y) => x.name.CompareTo(y.name));
+            var skinPicker = Traverse.Create(GameObject.FindObjectOfType<SkinPicker>(includeInactive:true));
+            skinPicker.Method("ClearAllEntries").GetValue();
+            skinPicker.Method("SetupBuiltInEntries").GetValue();
+            skinPicker.Method("AddCustomEntries").GetValue();
 
             ModManager.instance.ContentChanged();
 
@@ -243,6 +297,12 @@ namespace RavenM
 
             // Sort mutators
             ModManager.instance.loadedMutators.Sort((x, y) => x.name.CompareTo(y.name));
+
+            // Map
+            var mapPicker = Traverse.Create(GameObject.FindObjectOfType<MapPicker>(includeInactive:true));
+            mapPicker.Method("ClearAllEntries").GetValue();
+            mapPicker.Method("SetupBuiltInEntries").GetValue();
+            mapPicker.Method("AddCustomEntries").GetValue();
 
             if (!LobbySystem.instance.InLobby || !LobbySystem.instance.LobbyDataReady || LobbySystem.instance.IsLobbyOwner || LobbySystem.instance.ModsToDownload.Count > 0)
                 return;
@@ -372,6 +432,20 @@ namespace RavenM
 
         public bool RequestModReload = false;
 
+        public GameModeType currentGameMode = GameModeType.Battalion;
+
+        // used for mod config list to avoid set up game config too many times, list index is team index
+        public List<Dictionary<VehicleSpawner.VehicleSpawnType, string>> currentVehicleList;
+        public List<Dictionary<TurretSpawner.TurretSpawnType, string>> currentTurretList;
+        public List<string> currentWeaponList;
+        public List<string> currentSkinList;
+
+        /// <summary>
+        /// Is the plugin changing the mod config, if yes, the patch will allow the action
+        /// </summary>
+        public bool isChangingList = false;
+        public bool isListChanged = true;
+
         public Texture2D LobbyBackground = new Texture2D(1, 1);
 
         public Texture2D ProgressTexture = new Texture2D(1, 1);
@@ -424,6 +498,32 @@ namespace RavenM
             Callback<DownloadItemResult_t>.Create(OnItemDownload);
             Callback<LobbyMatchList_t>.Create(OnLobbyList);
             Callback<LobbyDataUpdate_t>.Create(OnLobbyData);
+
+            CleanModConfigList();
+        }
+
+        public void CleanModConfigList()
+        {
+            currentVehicleList = new List<Dictionary<VehicleSpawner.VehicleSpawnType, string>>();
+            currentTurretList = new List<Dictionary<TurretSpawner.TurretSpawnType, string>>();
+            currentWeaponList = new List<string>();
+            currentSkinList = new List<string>();
+            for (int i = 0; i < 2; i++)
+            {
+                currentVehicleList.Add( new Dictionary<VehicleSpawner.VehicleSpawnType, string>() );
+                currentTurretList.Add( new Dictionary<TurretSpawner.TurretSpawnType, string>() );
+                foreach (var type in VehicleSpawner.ALL_VEHICLE_TYPES)
+                {
+                    currentVehicleList[i].Add(type, null);
+                }
+
+                foreach (var type in TurretSpawner.ALL_TURRET_TYPES)
+                {
+                    currentTurretList[i].Add(type, null);
+                }
+                currentWeaponList.Add(null);
+                currentSkinList.Add(null);
+            }
         }
 
         public List<CSteamID> GetLobbyMembers()
@@ -478,8 +578,13 @@ namespace RavenM
             Plugin.logger.LogInfo("Joined lobby!");
             CurrentBannedMembers.Clear();
             LobbySetCache.Clear();
+            CleanModConfigList();
+            isListChanged = true;
             RequestModReload = false;
             LoadedServerMods = false;
+            var instantActionConfigMenu = Traverse.Create(InstantActionConfigMenu.instance);
+            instantActionConfigMenu.Method("SetGameMode", GameManager.GetGameModePrefab(currentGameMode)).GetValue();
+            //instantActionConfigMenu.Method("SetMap", GameManager.GetGameModePrefab(currentGameMode)).GetValue();
 
             if (pCallback.m_EChatRoomEnterResponse != (uint)EChatRoomEnterResponse.k_EChatRoomEnterResponseSuccess)
             {
@@ -688,9 +793,11 @@ namespace RavenM
         private void StartAsClient()
         {
             ReadyToPlay = true;
+            var instantActionConfigMenu = Traverse.Create(InstantActionConfigMenu.instance);
             //No initial bots! Many errors otherwise!
-            InstantActionMaps.instance.botNumberField.text = "0";
-            InstantActionMaps.instance.StartGame();
+            instantActionConfigMenu.Field("botAmountEagleIF").GetValue<TMP_InputField>().text = 0.ToString();
+            instantActionConfigMenu.Field("botAmountRavenIF").GetValue<TMP_InputField>().text = 0.ToString();
+            instantActionConfigMenu.Method("StartGame").GetValue();
         }
 
         private void OnLobbyList(LobbyMatchList_t pCallback)
@@ -742,86 +849,99 @@ namespace RavenM
             // the former at least has visual input for the non-host clients,
             // which is also important.
             // InstantActionMaps.instance.gameModeDropdown.value = 0;
-            int customMapOptionIndex = (int)typeof(InstantActionMaps).GetField("customMapOptionIndex", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(InstantActionMaps.instance);
-            var entries = (List<InstantActionMaps.MapEntry>)typeof(InstantActionMaps).GetField("entries", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(InstantActionMaps.instance);
+            // TODO: do not use index to select vehicle
+            var instantActionConfigMenu = Traverse.Create(InstantActionConfigMenu.instance);
+            var mapEntryData = instantActionConfigMenu.Field("selectedMap").GetValue<MapEntryData>();
+            var playerTeamDD = instantActionConfigMenu.Field("playerTeamDD").GetValue<TMP_Dropdown>();
             // Don't allow spectator.
-            if (InstantActionMaps.instance.teamDropdown.value == 2)
+            if (playerTeamDD.value == 2)
             {
-                InstantActionMaps.instance.teamDropdown.value = 0;
+                playerTeamDD.value = 0;
             }
-            SetLobbyMemberDataDedup("team", InstantActionMaps.instance.teamDropdown.value == 0 ? "E" : "R");
+            SetLobbyMemberDataDedup("team", playerTeamDD.value == 0 ? "E" : "R");
 
             if (IsLobbyOwner)
             {
-                SetLobbyDataDedup("gameMode", InstantActionMaps.instance.gameModeDropdown.value.ToString());
-                SetLobbyDataDedup("nightMode", InstantActionMaps.instance.nightToggle.isOn.ToString());
-                SetLobbyDataDedup("playerHasAllWeapons", InstantActionMaps.instance.playerHasAllWeaponsToggle.isOn.ToString());
-                SetLobbyDataDedup("reverseMode", InstantActionMaps.instance.reverseToggle.isOn.ToString());
-                SetLobbyDataDedup("botNumberField", InstantActionMaps.instance.botNumberField.text);
-                SetLobbyDataDedup("balance", InstantActionMaps.instance.balanceSlider.value.ToString(CultureInfo.InvariantCulture));
-                SetLobbyDataDedup("respawnTime", InstantActionMaps.instance.respawnTimeField.text);
-                SetLobbyDataDedup("gameLength", InstantActionMaps.instance.gameLengthDropdown.value.ToString());
-                SetLobbyDataDedup("loadedLevelEntry", InstantActionMaps.instance.mapDropdown.value.ToString());
+                SetLobbyDataDedup("gameMode", ((int)this.currentGameMode).ToString());
+                SetLobbyDataDedup("nightMode", InstantActionConfigMenu.instance.isNight.ToString());
+                SetLobbyDataDedup("botAmountEagle", instantActionConfigMenu.Field("botAmountEagleIF").GetValue<TMP_InputField>().text);
+                SetLobbyDataDedup("botAmountRaven", instantActionConfigMenu.Field("botAmountRavenIF").GetValue<TMP_InputField>().text);
+                SetLobbyDataDedup("respawnTime", instantActionConfigMenu.Field("respawnTimeIF").GetValue<TMP_InputField>().text);
+                SetLobbyDataDedup("gameLength", instantActionConfigMenu.Field("gameLengthDD").GetValue<TMP_Dropdown>().value.ToString());
+                SetLobbyDataDedup("map", mapEntryData.GetName());
+                SetLobbyDataDedup("isOfficalMap", mapEntryData.IsOfficial().ToString());
+
                 // For SpecOps.
-                if (InstantActionMaps.instance.gameModeDropdown.value == 1)
-                {
-                    SetLobbyDataDedup("team", InstantActionMaps.instance.teamDropdown.value.ToString());
+                if (this.currentGameMode == GameModeType.SpecOps)
+                {  // FIXME
+                    SetLobbyDataDedup("team", playerTeamDD.value.ToString());
                 }
 
-                if (InstantActionMaps.instance.mapDropdown.value == customMapOptionIndex && entries != null)
-                {
-                    SetLobbyDataDedup("customMap", entries[customMapOptionIndex].metaData.displayName);
-                }
-
-                for (int i = 0; i < 2; i++)
+                for (int i = 0; i < 2 && isListChanged; i++)  // the `i` is team index
                 {
                     var teamInfo = GameManager.instance.gameInfo.team[i];
 
-                    var weapons = new List<int>();
-                    foreach (var weapon in teamInfo.availableWeapons)
+                    var weaponList = new List<string>();
+                    foreach (var tierdWeapon in teamInfo.availableWeapons.AllAsTieredWeaponEntries())
                     {
-                        weapons.Add(weapon.nameHash);
+                        if( !weaponList.Contains(tierdWeapon.ToString()) ) weaponList.Add($"{(int)tierdWeapon.tier}#{tierdWeapon.entry.nameHash}");
                     }
-                    string weaponString = string.Join(",", weapons.ToArray());
+                    string weaponString = string.Join(",", weaponList.ToArray());
                     SetLobbyDataDedup(i + "weapons", weaponString);
 
-                    foreach (var vehiclePrefab in teamInfo.vehiclePrefab)
+                    foreach (var vehicleDict in teamInfo.vehicleSlot)
                     {
-                        var type = vehiclePrefab.Key;
-                        var prefab = vehiclePrefab.Value;
+                        var vehicles = new List<string>();
+                        var type = vehicleDict.Key;
+                        var slotInfo = vehicleDict.Value;
 
-                        bool isDefault = true; // Default vehicle.
-                        int idx = Array.IndexOf(ActorManager.instance.defaultVehiclePrefabs, prefab);
-
-                        if (idx == -1)
+                        foreach (var prefab in slotInfo.AllPrefabs())
                         {
-                            isDefault = false;
-                            idx = sortedModdedVehicles.IndexOf(prefab);
+                            bool isDefault = true; // Default vehicle.
+                            int idx = Array.IndexOf(ActorManager.instance.defaultVehiclePrefabs, prefab);
+
+                            if (idx == -1)
+                            {
+                                isDefault = false;
+                                idx = sortedModdedVehicles.IndexOf(prefab);
+                            }
+
+                            if (slotInfo.IsAvailable(prefab, out var tier))
+                                vehicles.Add($"{isDefault}#{(int)tier}#{idx}");
                         }
 
-                        SetLobbyDataDedup(i + "vehicle_" + type, prefab == null ? "NULL" : isDefault + "," + idx);
+                        SetLobbyDataDedup(i + "vehicle_" + type, vehicles.Count == 0 ? "NULL" : string.Join(",", vehicles.ToArray()));
                     }
 
-                    foreach (var turretPrefab in teamInfo.turretPrefab)
+                    foreach (var turretPrefab in teamInfo.turretSlot)
                     {
+                        var turrets = new List<string>();
                         var type = turretPrefab.Key;
-                        var prefab = turretPrefab.Value;
+                        var slotInfo = turretPrefab.Value;
 
-                        bool isDefault = true; // Default turret.
-                        int idx = Array.IndexOf(ActorManager.instance.defaultTurretPrefabs, prefab);
-
-                        if (idx == -1)
+                        foreach (var prefab in slotInfo.AllPrefabs())
                         {
-                            isDefault = false;
-                            var moddedTurrets = ModManager.AllTurretPrefabs().ToList();
-                            moddedTurrets.Sort((x, y) => x.name.CompareTo(y.name));
-                            idx = moddedTurrets.IndexOf(prefab);
+                            bool isDefault = true; // Default turret.
+                            int idx = Array.IndexOf(ActorManager.instance.defaultTurretPrefabs, prefab);
+
+                            if (idx == -1)
+                            {
+                                isDefault = false;
+                                var moddedTurrets = ModManager.AllTurretPrefabs().ToList();
+                                moddedTurrets.Sort((x, y) => x.name.CompareTo(y.name));
+                                idx = moddedTurrets.IndexOf(prefab);
+                            }
+
+                            if (slotInfo.IsAvailable(prefab, out var tier))
+                                turrets.Add($"{isDefault}#{(int)tier}#{idx}");
                         }
 
-                        SetLobbyDataDedup(i + "turret_" + type, prefab == null ? "NULL" : isDefault + "," + idx);
+                        SetLobbyDataDedup(i + "turret_" + type, turrets.Count == 0 ? "NULL" : string.Join(",", turrets.ToArray()));
+                        //Plugin.logger.LogInfo(SteamMatchmaking.GetLobbyData(ActualLobbyID, i + "turret_" + type));
+                        
                     }
 
-                    SetLobbyDataDedup(i + "skin", InstantActionMaps.instance.skinDropdowns[i].value.ToString());
+                    SetLobbyDataDedup(i + "skin",teamInfo.skin == null ? "": teamInfo.skin.name);
                 }
 
                 var enabledMutators = new List<int>();
@@ -851,47 +971,41 @@ namespace RavenM
             }
             else if (SteamMatchmaking.GetLobbyMemberData(ActualLobbyID, SteamUser.GetSteamID(), "loaded") == "yes")
             {
-                InstantActionMaps.instance.gameModeDropdown.value = int.Parse(SteamMatchmaking.GetLobbyData(ActualLobbyID, "gameMode"));
-                InstantActionMaps.instance.nightToggle.isOn = bool.Parse(SteamMatchmaking.GetLobbyData(ActualLobbyID, "nightMode"));
-                InstantActionMaps.instance.playerHasAllWeaponsToggle.isOn = bool.Parse(SteamMatchmaking.GetLobbyData(ActualLobbyID, "playerHasAllWeapons"));
-                InstantActionMaps.instance.reverseToggle.isOn = bool.Parse(SteamMatchmaking.GetLobbyData(ActualLobbyID, "reverseMode"));
-                InstantActionMaps.instance.configFlagsToggle.isOn = false;
-                InstantActionMaps.instance.botNumberField.text = SteamMatchmaking.GetLobbyData(ActualLobbyID, "botNumberField");
-                InstantActionMaps.instance.balanceSlider.value = float.Parse(SteamMatchmaking.GetLobbyData(ActualLobbyID, "balance"), CultureInfo.InvariantCulture);
-                InstantActionMaps.instance.respawnTimeField.text = SteamMatchmaking.GetLobbyData(ActualLobbyID, "respawnTime");
-                InstantActionMaps.instance.gameLengthDropdown.value = int.Parse(SteamMatchmaking.GetLobbyData(ActualLobbyID, "gameLength"));
+                var modeType = (GameModeType)int.Parse( SteamMatchmaking.GetLobbyData(ActualLobbyID, "gameMode") ); 
+                if ( modeType != currentGameMode )  // FIXME: the game mode should be chosen after the map is selected?
+                    instantActionConfigMenu.Method("SetGameMode", GameManager.GetGameModePrefab(modeType)).GetValue();
+                InstantActionConfigMenu.instance.isNight = bool.Parse(SteamMatchmaking.GetLobbyData(ActualLobbyID, "nightMode"));
+                instantActionConfigMenu.Field("configFlagsToggle").GetValue<Toggle>().isOn = false;
+                instantActionConfigMenu.Field("botAmountEagleIF").GetValue<TMP_InputField>().text = SteamMatchmaking.GetLobbyData(ActualLobbyID, "botAmountEagle");
+                instantActionConfigMenu.Field("botAmountRavenIF").GetValue<TMP_InputField>().text = SteamMatchmaking.GetLobbyData(ActualLobbyID, "botAmountRaven");
+                instantActionConfigMenu.Field("respawnTimeIF").GetValue<TMP_InputField>().text = SteamMatchmaking.GetLobbyData(ActualLobbyID, "respawnTime");
+                instantActionConfigMenu.Field("gameLengthDD").GetValue<TMP_Dropdown>().value = int.Parse(SteamMatchmaking.GetLobbyData(ActualLobbyID, "gameLength"));
                 // For SpecOps.
-                if (InstantActionMaps.instance.gameModeDropdown.value == 1)
-                {
-                    InstantActionMaps.instance.teamDropdown.value = int.Parse(SteamMatchmaking.GetLobbyData(ActualLobbyID, "team"));
+                if (modeType == GameModeType.SpecOps)
+                {   
+                    playerTeamDD.value = int.Parse(SteamMatchmaking.GetLobbyData(ActualLobbyID, "team"));
                 }
 
                 bool doubleCheck = false; //fix for entering into the wrong map with midgame joining
 
                 if (instance.LoadedServerMods)
                 {
-                    int givenEntry = int.Parse(SteamMatchmaking.GetLobbyData(ActualLobbyID, "loadedLevelEntry"));
+                    bool isOfficialMap = bool.Parse(SteamMatchmaking.GetLobbyData(ActualLobbyID, "isOfficalMap"));
 
-                    if (givenEntry == customMapOptionIndex)
+                    string mapName = SteamMatchmaking.GetLobbyData(ActualLobbyID, "map");
+
+                    if (mapEntryData.GetName() != mapName | isOfficialMap != mapEntryData.IsOfficial())
                     {
-                        string mapName = SteamMatchmaking.GetLobbyData(ActualLobbyID, "customMap");
-
-                        if (InstantActionMaps.instance.mapDropdown.value != customMapOptionIndex || entries[customMapOptionIndex].metaData.displayName != mapName)
+                        isChangingList = true;
+                        foreach (var entry in FindObjectOfType<MapPicker>(includeInactive: true).entryPanels)
                         {
-                            foreach (Transform item in InstantActionMaps.instance.customMapsBrowser.contentPanel)
+                            if (entry.entryData.GetName() == mapName && isOfficialMap == entry.entryData.IsOfficial())
                             {
-                                var entry = item.gameObject.GetComponent<CustomMapEntry>();
-                                if (entry.entry.metaData.displayName == mapName)
-                                {
-                                    entry.Select();
-                                }
+                                entry.Select();
+                                doubleCheck = true; //just to be safe
                             }
-                            doubleCheck = true; //just to be safe
                         }
-                    }
-                    else
-                    {
-                        InstantActionMaps.instance.mapDropdown.value = givenEntry;
+                        isChangingList = false;
                     }
                 }
 
@@ -900,84 +1014,122 @@ namespace RavenM
                 {
                     var teamInfo = GameManager.instance.gameInfo.team[i];
 
-                    teamInfo.availableWeapons.Clear();
-                    string[] weapons = SteamMatchmaking.GetLobbyData(ActualLobbyID, i + "weapons").Split(',');
-                    foreach (string weapon_str in weapons)
+                    var originalWeaponList = SteamMatchmaking.GetLobbyData(ActualLobbyID, i + "weapons");
+                    if (currentWeaponList[i] == originalWeaponList)
+                        goto SetupVehicles;
+                    isChangingList = true;
+                    teamInfo.ClearWeaponEntries();
+                    string[] weaponList = originalWeaponList.Split(',');
+                    foreach (string weapon_str in weaponList)
                     {
                         if (weapon_str == string.Empty)
                             continue;
-                        int hash = int.Parse(weapon_str);
+
+                        string[] weaponInfo = weapon_str.Split('#');
+                        int hash = int.Parse(weaponInfo[1]);
                         var weapon = NetActorController.GetWeaponEntryByHash(hash);
-                        teamInfo.availableWeapons.Add(weapon);
+                        teamInfo.AddWeaponEntry(weapon, (RarityTier)int.Parse(weaponInfo[0]));
                     }
+                    currentWeaponList[i] = SteamMatchmaking.GetLobbyData(ActualLobbyID, i + "weapons");
+                    isChangingList = false;
 
+                SetupVehicles:
                     bool changedVehicles = false;
-                    foreach (var vehicleType in (VehicleSpawner.VehicleSpawnType[])Enum.GetValues(typeof(VehicleSpawner.VehicleSpawnType)))
+                    foreach (var type in VehicleSpawner.ALL_VEHICLE_TYPES)
                     {
-                        var type = vehicleType;
-                        var prefab = teamInfo.vehiclePrefab[type];
+                        var vehicleList = SteamMatchmaking.GetLobbyData(ActualLobbyID, i + "vehicle_" + type);
 
-                        var targetPrefab = SteamMatchmaking.GetLobbyData(ActualLobbyID, i + "vehicle_" + type);
+                        if (vehicleList == currentVehicleList[i][type])
+                            continue;
 
-                        GameObject newPrefab = null;
-                        if (targetPrefab != "NULL")
+                        isChangingList = true;
+                        teamInfo.vehicleSlot[type].ClearEntries();
+                        string[] vehicleListReal = vehicleList.Split(',');
+                        foreach (string vehicle_str in vehicleListReal)
                         {
-                            string[] args = targetPrefab.Split(',');
-                            bool isDefault = bool.Parse(args[0]);
-                            int idx = int.Parse(args[1]);
+                            if (vehicle_str == string.Empty)
+                                continue;
+                            string[] vehicleInfo = vehicle_str.Split('#');
+                            if (vehicleInfo.Count() < 3)
+                            { // FIXME
+                                Plugin.logger.LogInfo(vehicle_str);
+                                continue;
+                            }
 
-                            if (isDefault)
+                            int idx = int.Parse(vehicleInfo[2]);
+                            GameObject prefab;
+                            if (bool.Parse(vehicleInfo[0]))
                             {
-                                newPrefab = ActorManager.instance.defaultVehiclePrefabs[idx];
+                                prefab = ActorManager.instance.defaultVehiclePrefabs[idx];
                             }
                             else
                             {
-                                newPrefab = sortedModdedVehicles[idx];
+                                prefab = sortedModdedVehicles[idx];
                             }
+                            teamInfo.AddVehicle(type, (RarityTier)int.Parse(vehicleInfo[1]), prefab);
+
                         }
-
-                        if (prefab != newPrefab)
-                            changedVehicles = true;
-
-                        teamInfo.vehiclePrefab[type] = newPrefab;
+                        currentVehicleList[i][type] = vehicleList;
+                        isChangingList = false;
+                        changedVehicles = true;
                     }
 
                     bool changedTurrets = false;
-                    foreach (var turretType in (TurretSpawner.TurretSpawnType[])Enum.GetValues(typeof(TurretSpawner.TurretSpawnType)))
+                    foreach (var type in TurretSpawner.ALL_TURRET_TYPES)
                     {
-                        var type = turretType;
-                        var prefab = teamInfo.turretPrefab[type];
+                        var turretList = SteamMatchmaking.GetLobbyData(ActualLobbyID, i + "turret_" + type);
 
-                        var targetPrefab = SteamMatchmaking.GetLobbyData(ActualLobbyID, i + "turret_" + type);
+                        if (turretList == currentTurretList[i][type])
+                            continue;
 
-                        GameObject newPrefab = null;
-                        if (targetPrefab != "NULL")
+                        isChangingList = true;
+                        teamInfo.turretSlot[type].ClearEntries();
+                        string[] turretListReal = turretList.Split(',');
+
+                        foreach (string vehicle_str in turretListReal)
                         {
-                            string[] args = targetPrefab.Split(',');
-                            bool isDefault = bool.Parse(args[0]);
-                            int idx = int.Parse(args[1]);
+                            if (vehicle_str == string.Empty)
+                                continue;
 
-                            if (isDefault)
+                            string[] turretInfo = vehicle_str.Split('#');
+                            int idx = int.Parse(turretInfo[2]);
+                            GameObject prefab;
+                            if (bool.Parse(turretInfo[0]))
                             {
-                                newPrefab = ActorManager.instance.defaultTurretPrefabs[idx];
+                                prefab = ActorManager.instance.defaultTurretPrefabs[idx];
                             }
                             else
                             {
-                                var moddedTurrets = ModManager.AllTurretPrefabs().ToList();
-                                newPrefab = moddedTurrets[idx];
+                                prefab = ModManager.AllTurretPrefabs().ToList()[idx];
                             }
+                            teamInfo.AddTurret(type, (RarityTier)int.Parse(turretInfo[1]), prefab);
                         }
-
-                        if (prefab != newPrefab)
-                            changedTurrets = true;
-
-                        teamInfo.turretPrefab[type] = newPrefab;
+                        currentTurretList[i][type] = turretList;
+                        changedTurrets = true;
+                        isChangingList = false;
                     }
 
                     if (changedVehicles || changedTurrets)
                         GamePreview.UpdatePreview();
 
-                    InstantActionMaps.instance.skinDropdowns[i].value = int.Parse(SteamMatchmaking.GetLobbyData(ActualLobbyID, i + "skin"));
+                    var skin = SteamMatchmaking.GetLobbyData(ActualLobbyID, i + "skin");
+                    if (skin == currentSkinList[i])
+                        goto SkipSkinSetup;
+                    isChangingList = true;
+                    foreach (var pickerEntryObject in FindObjectOfType<SkinPicker>(includeInactive: true).entryPanels)
+                    {
+                        // FIXME: Skin selector
+                        //var skinEntryData = Traverse.Create(pickerEntryObject).Field("_entry").GetValue<SkinEntryData>();
+                        if (pickerEntryObject.entryData != null & pickerEntryObject.entryData.GetName() == skin)
+                        {
+                            try { pickerEntryObject.Select(); }
+                            catch (Exception e) { Plugin.logger.LogError(e); }
+                            break;
+                        }
+                    }
+                    currentSkinList[i] = skin;
+                    isChangingList = false;
+                    SkipSkinSetup: { }
                 }
 
                 string[] enabledMutators = SteamMatchmaking.GetLobbyData(LobbySystem.instance.ActualLobbyID, "mutators").Split(',');
@@ -1105,7 +1257,7 @@ namespace RavenM
                 {
                     HasCommittedToStart = true;
                     IntentionToStart = false;
-                    InstantActionMaps.instance.StartGame();
+                    StartAsClient();
                 }
                 if (GUILayout.Button("ABORT"))
                 {

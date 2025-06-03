@@ -168,12 +168,21 @@ namespace RavenM.RSPatch.Wrapper
             }
             return output;
         }
+
+        // TODO: Test if it is decuplicated
         public static void AddVehiclesToNetworkPrefab()
         {
-            foreach (VehicleSpawner.VehicleSpawnType vehicleType in VehicleSpawner.ALL_VEHICLE_TYPES) {
-            
-                GameObject vehiclePrefab = VehicleSpawner.GetPrefab(0, vehicleType);
-                networkGameObjects.Add(vehiclePrefab.GetHashCode().ToString(), vehiclePrefab);
+            for (int i = 0; i < 2; i++)
+            {
+                var teamInfo = GameManager.instance.gameInfo.team[i];
+                foreach (var slotReal in teamInfo.vehicleSlot)
+                {
+                    foreach (var a in slotReal.Value.AllPrefabs())
+                    {
+                        var hash = a.GetHashCode().ToString();
+                        if (!networkGameObjects.ContainsKey(hash)) networkGameObjects.Add(hash, a);
+                    }
+                }
             }
             setupVehicles = true;
         }
