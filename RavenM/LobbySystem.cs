@@ -1156,7 +1156,7 @@ namespace RavenM
                             hasRequestLobbyListBefore = true;
                     }
 
-                    GUILayout.Label($"RavenM v{MyPluginInfo.PLUGIN_VERSION} patch 4\nClient Id: {Plugin.BuildGUID}");
+                    GUILayout.Label($"RavenM v{MyPluginInfo.PLUGIN_VERSION}\nClient Id: {Plugin.BuildGUID}");
                     if (GUILayout.Button("Project webpage"))
                         Application.OpenURL("https://ravenfieldcommunity.github.io/docs/en/Projects/ravenm.html");
                 }
@@ -1515,7 +1515,7 @@ namespace RavenM
                             foreach (Actor actor in ActorManager.instance.actors)
                             {
                                 if (actor.name.ToLower() == name.ToLower())
-                                    readyColor = actor.dead ? "#BEBEBE" : "00FF00";
+                                    readyColor = actor.dead ? "#484848" : "00FF00";
                             }
                     else
                         readyColor = (GameManager.IsInMainMenu() ? SteamMatchmaking.GetLobbyMemberData(ActualLobbyID, memberId, "loaded") == "yes"
