@@ -211,8 +211,8 @@ namespace RavenM
     {
         static bool Prefix()
         {
-            //if (LobbySystem.instance.InLobby && (int)typeof(MainMenu).GetField("page", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(MainMenu.instance) == MainMenu.PAGE_INSTANT_ACTION)
-            //    return false;
+            if (LobbySystem.instance.InLobby && (int)typeof(MainMenu).GetField("page", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(MainMenu.instance) == MainMenu.PAGE_MENU)
+                return false;
 
             return true;
         }
@@ -288,19 +288,9 @@ namespace RavenM
     {
         static void Postfix()
         {
-            /*if (InstantActionMaps.instance != null)
-            {
-                // We need to update the skin dropdown with the new mods.
-                typeof(InstantActionMaps).GetMethod("SetupSkinList", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(InstantActionMaps.instance, null);
-            }*/
             // Skin
             Plugin.logger.LogInfo("OnAfterModsLoaded");
             ModManager.instance.actorSkins.Sort((x, y) => x.name.CompareTo(y.name));
-            var skinPicker = Traverse.Create(GameObject.FindObjectOfType<SkinPicker>(includeInactive:true));
-            skinPicker.Method("ClearAllEntries").GetValue();
-            skinPicker.Method("SetupBuiltInEntries").GetValue();
-            skinPicker.Method("AddCustomEntries").GetValue();
-
             ModManager.instance.ContentChanged();
 
             // Sort vehicles
@@ -685,7 +675,7 @@ namespace RavenM
                 MainMenu.instance.OpenPageIndex(MainMenu.PAGE_INSTANT_ACTION);
                 ReadyToPlay = false;
 
-                if (Plugin.BuildGUID != SteamMatchmaking.GetLobbyData(ActualLobbyID, "build_id") && AllowVersionDiff)
+                if (Plugin.BuildGUID != SteamMatchmaking.GetLobbyData(ActualLobbyID, "build_id") && !AllowClientDifference )
                 {
                     Plugin.logger.LogInfo("Build ID mismatch! Leaving lobby.");
                     NotificationText = "You cannot join this lobby because you and the host are using different versions of RavenM.";
@@ -887,7 +877,7 @@ namespace RavenM
 
                 // For SpecOps.
                 if (this.currentGameMode == GameModeType.SpecOps)
-                {  // FIXME
+                {
                     SetLobbyDataDedup("team", playerTeamDD.value.ToString());
                 }
 
@@ -898,7 +888,7 @@ namespace RavenM
                     var weaponList = new List<string>();
                     foreach (var tierdWeapon in teamInfo.availableWeapons.AllAsTieredWeaponEntries())
                     {
-                        if( !weaponList.Contains(tierdWeapon.ToString()) ) weaponList.Add($"{(int)tierdWeapon.tier}#{tierdWeapon.entry.nameHash}");
+                        if (!weaponList.Contains(tierdWeapon.ToString())) weaponList.Add($"{(int)tierdWeapon.tier}#{tierdWeapon.entry.nameHash}");
                     }
                     string weaponString = string.Join(",", weaponList.ToArray());
                     SetLobbyDataDedup(i + "weapons", weaponString);
@@ -952,10 +942,12 @@ namespace RavenM
 
                         SetLobbyDataDedup(i + "turret_" + type, turrets.Count == 0 ? "NULL" : string.Join(",", turrets.ToArray()));
                         //Plugin.logger.LogInfo(SteamMatchmaking.GetLobbyData(ActualLobbyID, i + "turret_" + type));
-                        
+
                     }
 
-                    SetLobbyDataDedup(i + "skin",teamInfo.skin == null ? "": teamInfo.skin.name);
+                    SetLobbyDataDedup(i + "skin", teamInfo.skin == null ? "" : teamInfo.skin.name);
+                    SetLobbyDataDedup(i + "color", ColorUtility.ToHtmlStringRGB(teamInfo.teamColor));
+                    SetLobbyDataDedup(i + "name", teamInfo.teamName);
                 }
 
                 var enabledMutators = new List<int>();
@@ -1065,7 +1057,7 @@ namespace RavenM
                                 continue;
                             string[] vehicleInfo = vehicle_str.Split('#');
                             if (vehicleInfo.Count() < 3)
-                            { // FIXME
+                            { 
                                 Plugin.logger.LogInfo(vehicle_str);
                                 continue;
                             }
@@ -1128,22 +1120,25 @@ namespace RavenM
 
                     var skin = SteamMatchmaking.GetLobbyData(ActualLobbyID, i + "skin");
                     if (skin == currentSkinList[i])
-                        goto SkipSkinSetup;
+                        goto TeamConfigSetup;
                     isChangingList = true;
-                    foreach (var pickerEntryObject in FindObjectOfType<SkinPicker>(includeInactive: true).entryPanels)
+                    teamInfo.skin = null;
+                    foreach (var actorSkin in ModManager.instance.actorSkins)
                     {
-                        // FIXME: Skin selector
-                        //var skinEntryData = Traverse.Create(pickerEntryObject).Field("_entry").GetValue<SkinEntryData>();
-                        if (pickerEntryObject.entryData != null & pickerEntryObject.entryData.GetName() == skin)
+                        if (actorSkin.armSkin != null & actorSkin.name == skin)
                         {
-                            try { pickerEntryObject.Select(); }
+                            try { teamInfo.skin = actorSkin; }
                             catch (Exception e) { Plugin.logger.LogError(e); }
                             break;
                         }
                     }
+                    GamePreview.UpdatePreview();
                     currentSkinList[i] = skin;
                     isChangingList = false;
-                    SkipSkinSetup: { }
+                TeamConfigSetup:
+                    ColorUtility.TryParseHtmlString("#" + SteamMatchmaking.GetLobbyData(ActualLobbyID, i + "color"), out var color);
+                    teamInfo.teamColor = color;
+                    teamInfo.teamName = SteamMatchmaking.GetLobbyData(ActualLobbyID, i + "name");
                 }
 
                 string[] enabledMutators = SteamMatchmaking.GetLobbyData(LobbySystem.instance.ActualLobbyID, "mutators").Split(',');
