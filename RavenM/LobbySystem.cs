@@ -1565,7 +1565,7 @@ namespace RavenM
                     else
                         GUILayout.Label($"MODS: {modCount} | {modSize}");
 
-                    GUILayout.Label($"BOTS: {SteamMatchmaking.GetLobbyData(LobbyView, "botNumberField")}");
+                    GUILayout.Label($"BOTS: {SteamMatchmaking.GetLobbyData(LobbyView, "botAmountEagle")} / {SteamMatchmaking.GetLobbyData(LobbyView, "botAmountRaven")}");
 
                     var map = SteamMatchmaking.GetLobbyData(LobbyView, "customMap");
                     map = map != string.Empty ? map : "Default";
