@@ -66,11 +66,11 @@ namespace RavenM
             {
                 if (!changeGUID)
                 {
-                    return $"INDEV-EA{(currentGameBuildNumber == 0 ? 0 : currentGameBuildNumber)}-{MyPluginInfo.PLUGIN_VERSION.Replace(".","-")}-{Assembly.GetExecutingAssembly().ManifestModule.ModuleVersionId.ToString().Split('-').Last()}";
+                    return $"INDEV-EA{(GameManager.instance == null ? 0 : GameManager.instance.buildNumber)}-{MyPluginInfo.PLUGIN_VERSION.Replace(".","-")}-{Assembly.GetExecutingAssembly().ManifestModule.ModuleVersionId.ToString().Split('-').Last()}";
                 }
                 else
                 {
-                    return $"TESTMODE-EA{(currentGameBuildNumber == 0 ? 0 : currentGameBuildNumber)}-{MyPluginInfo.PLUGIN_VERSION.Replace(".","-")}-89a27d9e2fcb";
+                    return $"TESTMODE-EA{(GameManager.instance == null ? 0 : GameManager.instance.buildNumber)}-{MyPluginInfo.PLUGIN_VERSION.Replace(".","-")}-89a27d9e2fcb";
                 }
             }
         }
@@ -85,7 +85,7 @@ namespace RavenM
         public static float chatYOffset = 370f;
         public static float chatXOffset = 10f;
         public static int chatFontSize = 0;
-        public static bool allowVersionDiff = false;
+        public static bool allowClientDifference = false;
         public static bool changeChatFontSize = false;  //If need to change the font size
         
         private ConfigEntry<bool> configRavenMAddToBuiltInMutators;
@@ -146,10 +146,10 @@ namespace RavenM
                 "Chat Font Size",
                 0,
                 "Change the font size of chat field(0 is disable).").Value;
-            allowVersionDiff = Config.Bind("General.Toggles",
-                "Allow clients with different plugin version",
+            allowClientDifference = Config.Bind("General.Toggles",
+                "Allow client difference",
                 false,
-                "Allow host and players use plugins with different version.").Value;
+                "Allow host and players use plugins or game with different version.").Value;
             if (chatFontSize != 0)
                 changeChatFontSize = true;
             changeGUID = configRavenMDevMod.Value;
@@ -161,7 +161,7 @@ namespace RavenM
             }
             else
             {
-                if (customBuildInMutators != "NOT_REAL" && customBuildInMutators != "")
+                if (customBuildInMutators != "")
                 {
                     Logger.LogError($"Directory {customBuildInMutators} could not be found.");
                 }
@@ -226,9 +226,6 @@ namespace RavenM
                 discordObject.AddComponent<DiscordIntegration>();
                 DontDestroyOnLoad(discordObject);
             }
-            else if (!HasGotGameBuildNumber)
-                if ( GameManager.instance != null)
-                    currentGameBuildNumber = GameManager.instance.buildNumber;
             else if (!JoinedLobbyFromArgument && Arguments.ContainsKey("-ravenm-lobby"))
             {
                 JoinLobbyFromArgument();

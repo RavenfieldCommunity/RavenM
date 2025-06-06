@@ -264,10 +264,23 @@ namespace RavenM
         }
     }
 
-    [HarmonyPatch(typeof(InstantActionMaps), "SetupSkinList")]
-    public class SkinListPatch
+    [HarmonyPatch(typeof(MainMenu), "OpenPageIndex")]
+    public class OpenPageIndexPatch
     {
-        static void Prefix() => ModManager.instance.actorSkins.Sort((x, y) => x.name.CompareTo(y.name));
+        static bool Prefix(int index)
+        {
+            if (!LobbySystem.instance.InLobby)
+            {
+                Plugin.logger.LogInfo("Non-lobby state, skip!");
+                return true;
+            }
+            else if (LobbySystem.instance.IsLobbyOwner)
+                return true;
+
+            if (index == 16 & LobbySystem.instance.isChangingList)
+                return false;
+            return true;
+        }
     }
 
     [HarmonyPatch(typeof(ModManager), nameof(ModManager.FinalizeLoadedModContent))]
@@ -388,7 +401,7 @@ namespace RavenM
         public bool MidgameJoin = false;
         public bool EnableGodInspect = false;
         public bool EnablWallhack = false;
-        public bool AllowVersionDiff = true;
+        public bool AllowClientDifference = true;
 
         public string JoinLobbyID = string.Empty;
 
@@ -500,6 +513,7 @@ namespace RavenM
             Callback<LobbyDataUpdate_t>.Create(OnLobbyData);
 
             CleanModConfigList();
+            AllowClientDifference = Plugin.allowClientDifference;
         }
 
         public void CleanModConfigList()
@@ -1491,9 +1505,9 @@ namespace RavenM
                         GUIStack.Pop();
 
                     var lobbyGUID = SteamMatchmaking.GetLobbyData(LobbyView, "build_id");
-                    if (lobbyGUID != Plugin.BuildGUID && !AllowVersionDiff)
+                    if (lobbyGUID != Plugin.BuildGUID)
                     {
-                        GUILayout.Label($"<color=red>Uncompatible lobby with current version's RavenM or game</color>\nTarget client id:{lobbyGUID}");
+                        GUILayout.Label($"<color=red>Uncompatible lobby with current version's RavenM or game maybe!</color>\nTarget client id: {lobbyGUID}");
                     }
                     else if (GUILayout.Button("JOIN"))
                     {
