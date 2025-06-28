@@ -385,7 +385,7 @@ namespace RavenM
 
         public List<CSteamID> CurrentBannedMembers = new List<CSteamID>();
 
-        public CSteamID KickPrompt = CSteamID.Nil;
+        public CSteamID SelectedMemberPrompt = CSteamID.Nil;
 
         public string NotificationText = string.Empty;
 
@@ -514,7 +514,8 @@ namespace RavenM
                 if (EnablWallhack)
                     SetLobbyDataDedup("wallhack", "true");
                 if (LobbyNote != "")
-                    SetLobbyDataDedup("customAnnouncement", LobbyNote);
+                    // ok it's not a good idea to set the key to `customAnnouncement`, as in the cn build the announcement only can be seen after entering lobby  
+                    SetLobbyDataDedup("lobbyNote", LobbyNote);
 
 
                 bool needsToReload = false;
@@ -1413,7 +1414,7 @@ namespace RavenM
                     var status = SteamMatchmaking.GetLobbyData(LobbyView, "started") == "yes" ? "<color=green>In-game</color>" : "Configuring";
                     GUILayout.Label($"STATUS: {status}");
 
-                    var lobbyNote = SteamMatchmaking.GetLobbyData(LobbyView, "customAnnouncement");
+                    var lobbyNote = SteamMatchmaking.GetLobbyData(LobbyView, "lobbyNote");
                     if (lobbyNote != "")
                     {
                         GUILayout.Label($"LOBBY NOTE:");
@@ -1523,7 +1524,7 @@ namespace RavenM
                                                                     ? "#00FF00" : "red";
 
 
-                    if (memberId != KickPrompt)
+                    if (memberId != SelectedMemberPrompt)
                     {
                         GUILayout.BeginHorizontal();
                         if (SteamMatchmaking.GetLobbyMemberData(ActualLobbyID, memberId, "loaded") == "yes")
@@ -1541,28 +1542,20 @@ namespace RavenM
                             && IsLobbyOwner
                             && memberId != SteamUser.GetSteamID())
                         {
-                            KickPrompt = memberId;
+                            SelectedMemberPrompt = memberId;
                         }
                     }
                     else
                     {
-                        if (GUILayout.Button($"<color=red>BAN {name}</color>"))
+                        if (GUILayout.Button($"COPY ID OF {name}"))
                         {
-                            ChatManager.instance.SendLobbyChat($"/ban {memberId}");
-                            CurrentBannedMembers.Add(memberId);
-                            foreach (var connection in IngameNetManager.instance.ServerConnections)
-                            {
-                                if (SteamNetworkingSockets.GetConnectionInfo(connection, out SteamNetConnectionInfo_t pInfo) && pInfo.m_identityRemote.GetSteamID() == memberId)
-                                {
-                                    SteamNetworkingSockets.CloseConnection(connection, 0, null, false);
-                                }
-                            }
+                            GUIUtility.systemCopyBuffer = memberId.ToString();
                         }
 
                         if (Event.current.type == EventType.Repaint
                             && !GUILayoutUtility.GetLastRect().Contains(Event.current.mousePosition)
                             && Input.GetMouseButtonDown(0) || Input.GetMouseButton(1))
-                            KickPrompt = CSteamID.Nil;
+                            SelectedMemberPrompt = CSteamID.Nil;
                     }
                 }
                 GUILayout.EndScrollView();

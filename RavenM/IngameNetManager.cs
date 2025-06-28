@@ -986,13 +986,17 @@ public class IngameNetManager : MonoBehaviour
         GameManager.ReturnToMenu();
     }
 
-    public List<Actor> GetPlayers()
-    {
-        List<Actor> actors = new List<Actor>();
-        foreach (var kv in IngameNetManager.instance.ClientActors)
+        /// <summary>
+        /// Get players (non-bot)
+        /// </summary>
+        /// <returns></returns>
+        public List<Actor> GetPlayers()
         {
-            var id = kv.Key;
-            var actor = kv.Value;
+            List<Actor> actors = new List<Actor>();
+            foreach (var kv in IngameNetManager.instance.ClientActors)
+            {
+                var id = kv.Key;
+                var actor = kv.Value;
 
             if (IngameNetManager.instance.OwnedActors.Contains(id))
                 continue;
@@ -2279,15 +2283,7 @@ public class IngameNetManager : MonoBehaviour
                                 var actor = ClientActors.ContainsKey(commandPacket.Id) ? ClientActors[commandPacket.Id] : null;
                                 bool inLobby = LobbySystem.instance.InLobby;
 
-                                if (!inLobby && actor != null)
-                                {
-                                    ChatManager.instance.ProcessChatCommand(commandPacket.Command, actor, commandPacket.SteamID, false);
-                                }
-                                else
-                                {
-                                    ChatManager.instance.ProcessLobbyChatCommand(commandPacket.Command, commandPacket.SteamID, false);
-                                }
-
+                                ChatManager.instance.ProcessCommand(commandPacket.Command, commandPacket.SteamID, false, actor);
                             }
                             break;
                         case PacketType.Countermeasures:

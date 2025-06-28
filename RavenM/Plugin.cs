@@ -66,11 +66,11 @@ namespace RavenM
             {
                 if (!changeGUID)
                 {
-                    return $"INDEV-EA{(currentGameBuildNumber == 0 ? 0 : currentGameBuildNumber)}-{MyPluginInfo.PLUGIN_VERSION.Replace(".","-")}-{Assembly.GetExecutingAssembly().ManifestModule.ModuleVersionId.ToString().Split('-').Last()}";
+                    return $"INDEV-EA{(currentGameBuildNumber == 0 ? 0 : currentGameBuildNumber)}-{MyPluginInfo.PLUGIN_VERSION.Replace(".", "-")}-{Assembly.GetExecutingAssembly().ManifestModule.ModuleVersionId.ToString().Split('-').Last()}";
                 }
                 else
                 {
-                    return $"TESTMODE-EA{(currentGameBuildNumber == 0 ? 0 : currentGameBuildNumber)}-{MyPluginInfo.PLUGIN_VERSION.Replace(".","-")}-89a27d9e2fcb";
+                    return $"TESTMODE-EA{(currentGameBuildNumber == 0 ? 0 : currentGameBuildNumber)}-{MyPluginInfo.PLUGIN_VERSION.Replace(".", "-")}-89a27d9e2fcb";
                 }
             }
         }
@@ -78,8 +78,6 @@ namespace RavenM
         public static readonly int EXPECTED_BUILD_NUMBER = 31;
 
         private ConfigEntry<bool> configRavenMDevMod;
-        private bool showBuildGUID;
-
         public static float chatWidth = 500f;
         public static float chatHeight = 200f;
         public static float chatYOffset = 370f;
@@ -87,14 +85,21 @@ namespace RavenM
         public static int chatFontSize = 0;
         public static bool allowVersionDiff = false;
         public static bool changeChatFontSize = false;  //If need to change the font size
-        
+
         private ConfigEntry<bool> configRavenMAddToBuiltInMutators;
         private ConfigEntry<string> configRavenMBuiltInMutatorsDirectory;
+
+        private void InitLoadMessage()
+        {
+            DontDestroyOnLoad(new GameObject("InitMessageGUI", typeof(InitMessageGUI)));
+        }
+
         private void Awake()
         {
             instance = this;
             logger = Logger;
             config = Config;
+
 
             string[] args = Environment.GetCommandLineArgs();
 
@@ -103,6 +108,8 @@ namespace RavenM
                 if (args[i] == "-noravenm")
                 {
                     Logger.LogWarning($"Plugin {MyPluginInfo.PLUGIN_GUID} is canceled to load!");
+                    InitMessageGUI.stringToShow = "RavenM unloaded";
+                    InitLoadMessage();
                     throw new Exception("Cancel load");
                 }
             }
@@ -122,10 +129,7 @@ namespace RavenM
                                                                 "Directory",
                                                                 "",
                                                                 "The mutators in the folder will be added automatically as Build In Mutators, this is for testing mutators without having to start the game with mods.");
-            showBuildGUID = Config.Bind("General.Toggles",
-                "Show GUID",
-                true,
-                "Show GUID on screen.").Value;
+
             chatWidth = Config.Bind("General.ChatField",
                 "Chat Width",
                 500f,
@@ -191,11 +195,9 @@ namespace RavenM
                     Arguments.Add(argument, "");
                 }
             }
+            InitLoadMessage();
         }
-        private void OnGUI()
-        {
-            if (showBuildGUID) GUI.Label(new Rect(10, Screen.height - 20, 400, 40), $"RavenM ID: {BuildGUID}");
-        }
+
         public void printConsole(string message)
         {
             Lua.ScriptConsole.instance.LogInfo(message);
@@ -227,14 +229,18 @@ namespace RavenM
                 DontDestroyOnLoad(discordObject);
             }
             else if (!HasGotGameBuildNumber)
-                if ( GameManager.instance != null)
+                if (GameManager.instance != null)
                     currentGameBuildNumber = GameManager.instance.buildNumber;
-            else if (!JoinedLobbyFromArgument && Arguments.ContainsKey("-ravenm-lobby"))
-            {
-                JoinLobbyFromArgument();
-            }
-            else if (showBuildGUID)
-                this.enabled=false;
+                else if (!JoinedLobbyFromArgument && Arguments.ContainsKey("-ravenm-lobby"))
+                {
+                    JoinLobbyFromArgument();
+                }
+                this.enabled = false;
+        }
+
+        void OnDestory()
+        {
+            instance = null;
         }
 
         void JoinLobbyFromArgument()
@@ -245,6 +251,23 @@ namespace RavenM
             LobbySystem.instance.InLobby = true;
             LobbySystem.instance.IsLobbyOwner = false;
             LobbySystem.instance.LobbyDataReady = false;
+        }
+    }
+
+    public class InitMessageGUI : MonoBehaviour
+    {
+        public float maxlifetime;
+        public static string stringToShow;
+        public void Awake()
+        {
+            maxlifetime = Time.time + 30;
+            stringToShow = "RavenM loaded, press `M` to show UI";
+        }
+
+        public void OnGUI()
+        {
+            if (maxlifetime < Time.time) Destroy(this);
+            GUI.Label(new Rect(10, Screen.height - 20, 400, 40), $"{stringToShow}");
         }
     }
 }

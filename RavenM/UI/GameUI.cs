@@ -110,11 +110,14 @@ namespace RavenM.UI
             }
         }
 
+        /// <summary>
+        /// Set up nametag props from lobby data
+        /// </summary>
         public void ToggleNameTags()
         {
             if (instance == null)
                 return;
-            bool parsedValue = bool.TryParse(SteamMatchmaking.GetLobbyData(LobbySystem.instance.ActualLobbyID, "nameTags"),out bool nameTagsEnabled);
+            bool parsedValue = bool.TryParse(SteamMatchmaking.GetLobbyData(LobbySystem.instance.ActualLobbyID, "nameTags"), out bool nameTagsEnabled);
             if (parsedValue)
                 LobbySystem.instance.nameTagsEnabled = nameTagsEnabled;
             bool parsedValue2 = bool.TryParse(SteamMatchmaking.GetLobbyData(LobbySystem.instance.ActualLobbyID, "nameTagsForTeamOnly"), out bool nameTagsTeamOnlyEnabled);
