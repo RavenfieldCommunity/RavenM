@@ -95,6 +95,26 @@ namespace RavenM
             return false;
         }
     }
+
+    // TODO: another better way to sync C4 exploding after hot join??
+    // If we can also spawn the renderer ...
+    [HarmonyPatch]
+    public class RemoteDetonatorWeaponPatch
+    {
+        [HarmonyPatch(typeof(RemoteDetonatorWeapon), "Fire")]
+        [HarmonyPrefix]
+        static bool Fire(SquadLeaderKit __instance)
+        {
+            if (!IngameNetManager.instance.IsClient)
+                return true;
+            if (__instance.user.controller as NetActorController)
+            {
+                Plugin.logger.LogInfo("Skip C4 exploding");
+                return false;
+            }
+            return true;
+        }
+    }
     
 
     /// <summary>
@@ -236,6 +256,8 @@ namespace RavenM
                 // This would be broken since we normally set the projectiles it spawns to null.
                 actor.activeWeapon.onSpawnProjectiles.RemoveAllListeners();
             }
+
+            if (Targets.ParachuteDeployed) actor.DeployParachute(); // Luckily this method will check if `parachuteDeployed` is `true`
         }
 
         public static WeaponManager.WeaponEntry GetWeaponEntryByHash(int hash)

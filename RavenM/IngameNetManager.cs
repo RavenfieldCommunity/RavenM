@@ -657,6 +657,7 @@ public class IngameNetManager : MonoBehaviour
             if (hit.point != null)
             {
                 Plugin.logger.LogInfo($"Placing marker at: {hit.point}");
+                    ChatManager.instance.PushLobbyChatMessage($"Placed a marker (for 10s).", ChatManager.instance.SteamUsername);
 
                     if ((hit.point - MarkerPosition).magnitude > 10)
                     {
@@ -1213,6 +1214,7 @@ public class IngameNetManager : MonoBehaviour
     {
         if (!IsClient)
             return;
+        
 
         SteamNetworkingSockets.RunCallbacks();
 
@@ -1248,6 +1250,9 @@ public class IngameNetManager : MonoBehaviour
 
                                 foreach (ActorPacket actor_packet in bulkActorPacket.Updates)
                                 {
+                                    if (actor_packet.Team == -1)
+                                        continue;
+                                    
                                     if (OwnedActors.Contains(actor_packet.Id))
                                         continue;
 
@@ -1300,7 +1305,7 @@ public class IngameNetManager : MonoBehaviour
                                         actor.gameObject.AddComponent<GuidComponent>().guid = actor_packet.Id;
 
                                         if ((actor_packet.Flags & (int)ActorStateFlags.Dead) == 0)
-                                            actor.SpawnAt(actor_packet.Position, Quaternion.identity);
+                                                actor.SpawnAt(actor_packet.Position, Quaternion.identity);
 
                                         var weapon_parent = actor.controller.WeaponParent();
                                         var loadout = actor.controller.GetLoadout();
@@ -1399,6 +1404,7 @@ public class IngameNetManager : MonoBehaviour
                                             voiceSource.volume = VoiceChatVolume;
                                             voiceSource.Play();
                                         }
+                                         
                                         ClientActors[actor_packet.Id] = actor;
                                         RSPatch.RavenscriptEventsManagerPatch.events.onPlayerJoin.Invoke(actor);
                                     }
@@ -2807,6 +2813,8 @@ public class IngameNetManager : MonoBehaviour
                                          ? pguid.guid : 0,
                 TargetDetectionProgress = actor.controller is AiActorController aiActorController && aiActorController.slowTargetDetection && aiActorController.HasTarget()
                                          ? aiActorController.targetDetectionProgress : -1f,
+                // what does `actor.canDeployParachute` do ???
+                ParachuteDeployed = actor.parachuteDeployed
             };
 
             bulkActorUpdate.Updates.Add(net_actor);

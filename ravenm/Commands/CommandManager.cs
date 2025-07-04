@@ -121,8 +121,7 @@ namespace RavenM.Commands
                         return;
                     }
                     targetActor.KillSilently();
-                    if (!isLocal)
-                        ChatManager.instance.PushCommandChatMessage($"Killed actor {targetActor.name}", Color.white, false, false);
+                    ChatManager.instance.PushLobbyChatMessage($"Killed actor {targetActor.name}");
                 }
             }
             );

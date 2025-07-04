@@ -745,12 +745,18 @@ namespace RavenM
             // InstantActionMaps.instance.gameModeDropdown.value = 0;
             int customMapOptionIndex = (int)typeof(InstantActionMaps).GetField("customMapOptionIndex", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(InstantActionMaps.instance);
             var entries = (List<InstantActionMaps.MapEntry>)typeof(InstantActionMaps).GetField("entries", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(InstantActionMaps.instance);
-            // Don't allow spectator.
-            if (InstantActionMaps.instance.teamDropdown.value == 2)
+            if (InstantActionMaps.instance.teamDropdown.value == 0)
             {
-                InstantActionMaps.instance.teamDropdown.value = 0;
+                SetLobbyMemberDataDedup("team", "E");
             }
-            SetLobbyMemberDataDedup("team", InstantActionMaps.instance.teamDropdown.value == 0 ? "E" : "R");
+            else if (InstantActionMaps.instance.teamDropdown.value == 1)
+            {
+                SetLobbyMemberDataDedup("team", "R");
+            }
+            else if (InstantActionMaps.instance.teamDropdown.value == 2)
+            {
+                SetLobbyMemberDataDedup("team", "I");
+            }
 
             if (IsLobbyOwner)
             {
@@ -1528,7 +1534,13 @@ namespace RavenM
                     {
                         GUILayout.BeginHorizontal();
                         if (SteamMatchmaking.GetLobbyMemberData(ActualLobbyID, memberId, "loaded") == "yes")
-                            GUILayout.Box(team == "R" ? $"<color=red>{team}</color>" : $"<color=#00FFF7>{team}</color>");
+                        {
+                            string teamColorString;
+                            if (team == "R") teamColorString = "red";
+                            else if (team == "E") teamColorString = "#00FFF7";
+                            else teamColorString = "white";
+                            GUILayout.Box($"<color={teamColorString}>{team}</color>");
+                        }
                         else
                             GUILayout.Box($"({modsDownloaded}/{totalMods})");
                         GUILayout.Space(3);
