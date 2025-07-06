@@ -49,6 +49,21 @@ namespace RavenM
         }
     }
 
+    [HarmonyPatch(typeof(BattlePlanUi), "Update")]
+    public class BattlePlanUiForInspectorPatch
+    {
+        static bool Prefix(BattlePlanUi __instance)
+        {
+            if (IngameNetManager.instance.IsClient)
+            {
+                __instance.enabled = false;
+                return false;
+            }
+
+            return true;
+        }
+    }
+
     /// <summary>
     /// Don't spawn a foreign actor before they wish
     /// to spawn.
@@ -500,6 +515,7 @@ public class IngameNetManager : MonoBehaviour
     public HashSet<int> OwnedActors = new HashSet<int>();
 
     public Dictionary<int, Actor> ClientActors = new Dictionary<int, Actor>();
+    public Dictionary<int, CSteamID> SteamIDsOfPlayers = new Dictionary<int, CSteamID>();
 
     public HashSet<int> OwnedVehicles = new HashSet<int>();
 
@@ -861,6 +877,7 @@ public class IngameNetManager : MonoBehaviour
         ActorStateCache.Clear();
         OwnedActors.Clear();
         ClientActors.Clear();
+        SteamIDsOfPlayers.Clear();
         OwnedVehicles.Clear();
         ClientVehicles.Clear();
         RemoteDeadVehicles.Clear();
@@ -1406,6 +1423,7 @@ public class IngameNetManager : MonoBehaviour
                                         }
                                          
                                         ClientActors[actor_packet.Id] = actor;
+                                        SteamIDsOfPlayers.Add(actor_packet.Id, msg.m_identityPeer.GetSteamID());
                                         RSPatch.RavenscriptEventsManagerPatch.events.onPlayerJoin.Invoke(actor);
                                     }
 
@@ -2124,9 +2142,9 @@ public class IngameNetManager : MonoBehaviour
 
                                 var actor = ClientActors.ContainsKey(chatPacket.Id) ? ClientActors[chatPacket.Id] : null;
                                 if (actor == null)
-                                    ChatManager.instance.PushChatMessage(null, chatPacket.Message, true, -1);
+                                    ChatManager.instance.PushChatMessage(SteamFriends.GetFriendPersonaName(msg.m_identityPeer.GetSteamID()), chatPacket.Message, true, -1);
                                 else
-                                    ChatManager.instance.PushChatMessage(actor, chatPacket.Message, !chatPacket.TeamOnly, actor.team);
+                                    ChatManager.instance.PushChatMessage(actor.name, chatPacket.Message, !chatPacket.TeamOnly, actor.team);
                             }
                             break;
                         case PacketType.Voip:

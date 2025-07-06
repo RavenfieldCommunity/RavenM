@@ -173,7 +173,7 @@ namespace RavenM
                 }
                 else
                 {
-                    PushLobbyChatMessage(chat, SteamFriends.GetFriendPersonaName((CSteamID)steamId));
+                    PushLobbyChatMessage(System.Text.RegularExpressions.Regex.Unescape(chat), SteamFriends.GetFriendPersonaName((CSteamID)steamId));
                 }
             }
 
@@ -212,24 +212,15 @@ namespace RavenM
         /// <param name="global"></param>
         /// <param name="team"></param>
         // TODO: merge with PushLobbyChatMessage()
-        public void PushChatMessage(Actor actor, string message, bool global, int team)
+        public void PushChatMessage(string username, string message, bool global, int team)
         {
-            string name;
-            if (actor != null)
-                name = actor.name;
-            else
-                name = "";
+            name = username;
             if (!global && GameManager.PlayerTeam() != team)
                 return;
 
-            if (team == -1)
-                FullChatLink += $"<color=#eeeeee>{System.Text.RegularExpressions.Regex.Unescape(message)}</color>\n";
-            else
-            {
-                string color = !global ? "green" : (team == 0 ? "blue" : "red");
-                FullChatLink += $"<color={color}><b><{name}></b></color> {System.Text.RegularExpressions.Regex.Unescape(message)}\n";
-                RSPatch.RavenscriptEventsManagerPatch.events.onReceiveChatMessage.Invoke(actor, message);
-            }
+            string color = !global ? "green" : (team == -1 ? "white" : (team == 0 ? "blue" : "red"));
+            FullChatLink += $"<color={color}><b><{name}></b></color> {System.Text.RegularExpressions.Regex.Unescape(message)}\n";
+            RSPatch.RavenscriptEventsManagerPatch.events.onReceiveChatMessage.Invoke(null, message);
 
             _chatScrollPosition.y = Mathf.Infinity;
         }
@@ -437,13 +428,12 @@ namespace RavenM
                         {
                             if (isLobbyChat)
                             {
-                                Plugin.logger.LogInfo($"{CurrentChatMessage}{SteamUsername}");
+                                Plugin.logger.LogInfo($"{CurrentChatMessage} {SteamUsername}");
                                 PushLobbyChatMessage(CurrentChatMessage, SteamUsername);
-                                SendLobbyChat(CurrentChatMessage);
                             }
                             else
                             {
-                                PushChatMessage(ActorManager.instance.player, CurrentChatMessage, ChatMode, GameManager.PlayerTeam());
+                                PushChatMessage(SteamUsername, CurrentChatMessage, ChatMode, GameManager.PlayerTeam());
 
                                 // Send message to users in lobby if not team chat
                                 // TODO: Get messages sent from in game -> lobby

@@ -295,6 +295,7 @@ namespace RavenM.Commands
                         ChatManager.instance.PushLobbyCommandChatMessage("Target B not found", Color.red, false, false);
                         throw new Exception("No target B");
                     }
+                    Plugin.logger.LogInfo($"Target B to tp: {targetB.name}");
 
                     List<Actor> targetsA = new List<Actor>();
                     string targetsAString = commands[1];
@@ -318,10 +319,11 @@ namespace RavenM.Commands
                         ChatManager.instance.PushLobbyCommandChatMessage("Target A not found", Color.red, false, false);
                         throw new Exception("No target A");
                     }
+                    Plugin.logger.LogInfo($"Targets A to tp: {targetsA.Count}");
 
                     foreach (var singleA in targetsA)
                     {
-                        if(singleA != null & !singleA.dead)
+                        if (singleA != null && !(singleA.controller as NetActorController) & !singleA.dead && !singleA.IsSeated())
                             singleA.transform.position = targetB.transform.position;
                     }
 
@@ -513,7 +515,10 @@ namespace RavenM.Commands
             else if (targetState == "b") botState = true;
             else isAll = true;
 
-            string prefixRealSelector = targetSelector.Replace(isAll ? "" : targetState, "");
+            string prefixRealSelector;
+            if (isAll) prefixRealSelector = targetSelector;
+            else prefixRealSelector = targetSelector.Replace(targetState, "");
+
             var list = new List<Actor>();
             var etor = IngameNetManager.instance.ClientActors.GetEnumerator();
             while (etor.MoveNext())

@@ -108,8 +108,8 @@ namespace RavenM
                 if (args[i] == "-noravenm")
                 {
                     Logger.LogWarning($"Plugin {MyPluginInfo.PLUGIN_GUID} is canceled to load!");
-                    InitMessageGUI.stringToShow = "RavenM unloaded";
                     InitLoadMessage();
+                    InitMessageGUI.overwrittenStringToShow = "RavenM unloaded.";
                     throw new Exception("Cancel load");
                 }
             }
@@ -129,6 +129,7 @@ namespace RavenM
                                                                 "Directory",
                                                                 "",
                                                                 "The mutators in the folder will be added automatically as Build In Mutators, this is for testing mutators without having to start the game with mods.");
+
 
             chatWidth = Config.Bind("General.ChatField",
                 "Chat Width",
@@ -250,17 +251,20 @@ namespace RavenM
     public class InitMessageGUI : MonoBehaviour
     {
         public float maxlifetime;
-        public static string stringToShow;
+        public static string overwrittenStringToShow = null;
         public void Awake()
         {
             maxlifetime = Time.time + 30;
-            stringToShow = "RavenM loaded, press `M` to show UI";
         }
 
         public void OnGUI()
         {
             if (maxlifetime < Time.time) Destroy(this);
-            GUI.Label(new Rect(10, Screen.height - 20, 400, 40), $"{stringToShow}");
+            var rect = new Rect(10, Screen.height - 20, 400, 40);
+            if (overwrittenStringToShow == null)
+                GUI.Label(rect, "RavenM loaded, press `M` to show UI on Instant Actions Menu.");
+            else
+                GUI.Label(rect, $"{overwrittenStringToShow}");
         }
     }
 }

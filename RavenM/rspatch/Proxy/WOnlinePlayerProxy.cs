@@ -30,7 +30,7 @@ namespace RavenM.RSPatch.Proxy
 
         public static void PushChatMessage(string message)
         {
-            ChatManager.instance.PushChatMessage(ActorManager.instance.player, message,true, -1);
+            ChatManager.instance.PushChatMessage(ChatManager.instance.SteamUsername, message,true, -1);
         }
         public static void PushCommandChatMessage(string message,Color color,bool teamOnly,bool sendToAll)
         {
