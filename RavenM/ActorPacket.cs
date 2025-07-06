@@ -9,6 +9,9 @@ namespace RavenM
     /// </summary>
     public class ActorPacket
     {
+        /// <summary>
+        /// Actor id gened from random, or index for bot
+        /// </summary>
         public int Id;
 
         public string Name;
@@ -54,12 +57,14 @@ namespace RavenM
         public int MovingPlatformVehicleId;
 
         public float TargetDetectionProgress;
+
+        public bool ParachuteDeployed;
     }
 
     public enum ActorStateFlags
     {
         AiControlled                = 1 << 0,
-        DeployParachute             = 1 << 1,
+        DeployParachute             = 1 << 1, // Deprecated
         Fire                        = 1 << 2,
         Aiming                      = 1 << 3,
         IsMoving                    = 1 << 4,
