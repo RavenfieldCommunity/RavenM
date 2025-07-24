@@ -102,6 +102,7 @@ namespace RavenM
         }
     }
 
+    // runs after `StartLevel`
     [HarmonyPatch(typeof(GameManager), "StartGame")]
     public class FinalizeStartPatch
     {
@@ -233,6 +234,7 @@ namespace RavenM
     public class ModConfigPatch
     {
         [HarmonyPatch(typeof(VehicleEntryObject), "Select")]
+        [HarmonyPatch(typeof(MutatorEntryObject), "Select")]
         [HarmonyPatch(typeof(SkinEntryObject), "Select")]
         [HarmonyPatch(typeof(WeaponEntryObject), "Select")]
         [HarmonyPatch(typeof(GameModeEntryObject), "Select")]
@@ -397,6 +399,7 @@ namespace RavenM
 
         public bool InLobby = false;
 
+        // whether the client has already entered the lobby after steam fetching its data
         public bool LobbyDataReady = false;
 
         public string LobbyMemberCap = "250";
@@ -440,6 +443,7 @@ namespace RavenM
         // used for mod config list to avoid set up game config too many times, list index is team index
         public List<Dictionary<VehicleSpawner.VehicleSpawnType, string>> currentVehicleList;
         public List<Dictionary<TurretSpawner.TurretSpawnType, string>> currentTurretList;
+        public string currentMap;
         public List<string> currentWeaponList;
         public List<string> currentSkinList;
 
@@ -447,6 +451,7 @@ namespace RavenM
         /// Is the plugin changing the mod config, if yes, the patch will allow the action
         /// </summary>
         public bool isChangingList = false;
+        // for host itself and only used at host side
         public bool isListChanged = true;
 
         public Texture2D LobbyBackground = new Texture2D(1, 1);
@@ -512,6 +517,7 @@ namespace RavenM
             currentTurretList = new List<Dictionary<TurretSpawner.TurretSpawnType, string>>();
             currentWeaponList = new List<string>();
             currentSkinList = new List<string>();
+            currentMap = "";
             for (int i = 0; i < 2; i++)
             {
                 currentVehicleList.Add( new Dictionary<VehicleSpawner.VehicleSpawnType, string>() );
@@ -586,8 +592,6 @@ namespace RavenM
             isListChanged = true;
             RequestModReload = false;
             LoadedServerMods = false;
-            var instantActionConfigMenu = Traverse.Create(InstantActionConfigMenu.instance);
-            instantActionConfigMenu.Method("SetGameMode", GameManager.GetGameModePrefab(currentGameMode)).GetValue();
             //instantActionConfigMenu.Method("SetMap", GameManager.GetGameModePrefab(currentGameMode)).GetValue();
 
             if (pCallback.m_EChatRoomEnterResponse != (uint)EChatRoomEnterResponse.k_EChatRoomEnterResponseSuccess)
@@ -775,7 +779,7 @@ namespace RavenM
             Plugin.logger.LogInfo($"gameLength: {SteamMatchmaking.GetLobbyData(ActualLobbyID, "gameLength")}");
             Plugin.logger.LogInfo($"map: {SteamMatchmaking.GetLobbyData(ActualLobbyID, "map")}");
             Plugin.logger.LogInfo($"isOfficalMap: {SteamMatchmaking.GetLobbyData(ActualLobbyID, "isOfficalMap")}");
-            for (int i = 0; i < 2 && isListChanged; i++)
+            for (int i = 0; i < 2; i++)
             {
                 Plugin.logger.LogInfo($"{i}weapons: {SteamMatchmaking.GetLobbyData(ActualLobbyID, i + "weapons")}");
                 foreach (var vehicleDict in GameManager.instance.gameInfo.team[i].vehicleSlot)
@@ -987,7 +991,10 @@ namespace RavenM
                         //Plugin.logger.LogInfo(SteamMatchmaking.GetLobbyData(ActualLobbyID, i + "turret_" + type));
 
                     }
-
+                }
+                
+                for (int i = 0; i < 2; i++)  
+                {
                     SetLobbyDataDedup(i + "skin", teamInfo.skin == null ? "Default" : teamInfo.skin.name);
                     SetLobbyDataDedup(i + "color", teamInfo.teamColor == null ? ColorUtility.ToHtmlStringRGB(teamInfo.teamColor) : (i == 0 ? "0000FF" : "FF0000") );
                     SetLobbyDataDedup(i + "name", teamInfo.teamName == null ? (i == 0 ? "EAGLE" : "RAVEN") : teamInfo.teamName);
@@ -1225,14 +1232,18 @@ namespace RavenM
                         }
                     }
                 }
+                isListChanged = false;
 
                 if (doubleCheck)
                     return;
-
+                
+                // manually check by player to start game is better I think
+                /*
                 if (SteamMatchmaking.GetLobbyData(ActualLobbyID, "started") == "yes")
                 {
                     StartAsClient();
                 }
+                */
             }
         }
 

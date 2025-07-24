@@ -113,7 +113,7 @@ namespace RavenM.Commands
             {
                 Action = (string originalStringTrimed, bool isLocal) =>
                 {
-                    string[] commands = originalStringTrimed.Substring(1, originalStringTrimed.Length - 1).Split(' ');
+                    string[] commands = SplitSingleArgument(originalStringTrimed);
                     string targetName = commands[1];
                     Actor targetActor = GetActor(targetName);
                     if (targetActor == null)
@@ -139,7 +139,7 @@ namespace RavenM.Commands
                 needSendManually = true,
                 Action = (string originalStringTrimed, bool isLocal) =>
                 {
-                    string[] commands = originalStringTrimed.Substring(1, originalStringTrimed.Length - 1).Split(' ');
+                    string[] commands = SplitSingleArgument(originalStringTrimed);
                     string targetNameString = commands[1];
                     if (!isLocal)
                     {
@@ -163,9 +163,10 @@ namespace RavenM.Commands
                         if (targetIsClient)
                         {
                             LobbySystem.instance.NotificationText = "You were banned from the lobby!";
-                            SteamMatchmaking.LeaveLobby(LobbySystem.instance.ActualLobbyID);
                             if (GameManager.IsIngame())
-                                GameManager.ReturnToMenu();
+                                IngameMenuUi.instance.Menu();
+                            else
+                                SteamMatchmaking.LeaveLobby(LobbySystem.instance.ActualLobbyID);
                         }
                     }
                     else
@@ -324,7 +325,7 @@ namespace RavenM.Commands
                     foreach (var singleA in targetsA)
                     {
                         if (singleA != null && !(singleA.controller as NetActorController) & !singleA.dead && !singleA.IsSeated())
-                            singleA.transform.position = targetB.transform.position;
+                            singleA.controller.Move(targetB.transform.position - singleA.transfrom.position);
                     }
 
                 }

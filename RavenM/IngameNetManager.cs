@@ -54,7 +54,7 @@ namespace RavenM
     {
         static bool Prefix(BattlePlanUi __instance)
         {
-            if (IngameNetManager.instance.IsClient)
+            if (IngameNetManager.instance.IsClient & (GameManager.instance.gameModeParameters.l != null & GameManager.instance.gameModeParameters.playerTeam == -1)
             {
                 __instance.enabled = false;
                 return false;
