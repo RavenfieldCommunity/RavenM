@@ -304,8 +304,8 @@ namespace RavenM
             // Map
             var mapPicker = Traverse.Create(GameObject.FindObjectOfType<MapPicker>(includeInactive:true));
             mapPicker.Method("ClearAllEntries").GetValue();
-            mapPicker.Method("SetupBuiltInEntries").GetValue();
-            mapPicker.Method("AddCustomEntries").GetValue();
+            mapPicker.Method("GetBuiltInEntries").GetValue();
+            mapPicker.Method("GetCustomEntries").GetValue();
 
             if (!LobbySystem.instance.InLobby || !LobbySystem.instance.LobbyDataReady || LobbySystem.instance.IsLobbyOwner || LobbySystem.instance.ModsToDownload.Count > 0)
                 return;
