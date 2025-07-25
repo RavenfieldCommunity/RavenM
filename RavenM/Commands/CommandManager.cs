@@ -325,7 +325,7 @@ namespace RavenM.Commands
                     foreach (var singleA in targetsA)
                     {
                         if (singleA != null && !(singleA.controller as NetActorController) & !singleA.dead && !singleA.IsSeated())
-                            singleA.controller.Move(targetB.transform.position - singleA.transfrom.position);
+                            singleA.controller.Move(targetB.transform.position - singleA.transform.position);
                     }
 
                 }

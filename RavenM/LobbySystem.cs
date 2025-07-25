@@ -995,6 +995,8 @@ namespace RavenM
                 
                 for (int i = 0; i < 2; i++)  
                 {
+                    var teamInfo = GameManager.instance.gameInfo.team[i];
+                    
                     SetLobbyDataDedup(i + "skin", teamInfo.skin == null ? "Default" : teamInfo.skin.name);
                     SetLobbyDataDedup(i + "color", teamInfo.teamColor == null ? ColorUtility.ToHtmlStringRGB(teamInfo.teamColor) : (i == 0 ? "0000FF" : "FF0000") );
                     SetLobbyDataDedup(i + "name", teamInfo.teamName == null ? (i == 0 ? "EAGLE" : "RAVEN") : teamInfo.teamName);
