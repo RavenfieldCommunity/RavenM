@@ -306,8 +306,8 @@ namespace RavenM
             // Map
             var mapPicker = Traverse.Create(GameObject.FindObjectOfType<MapPicker>(includeInactive:true));
             mapPicker.Method("ClearAllEntries").GetValue();
-            mapPicker.Method("GetBuiltInEntries").GetValue();
-            mapPicker.Method("GetCustomEntries").GetValue();
+            mapPicker.Method("SetBuiltInEntries").GetValue();
+            mapPicker.Method("SetCustomEntries").GetValue();
 
             if (!LobbySystem.instance.InLobby || !LobbySystem.instance.LobbyDataReady || LobbySystem.instance.IsLobbyOwner || LobbySystem.instance.ModsToDownload.Count > 0)
                 return;
@@ -443,7 +443,6 @@ namespace RavenM
         // used for mod config list to avoid set up game config too many times, list index is team index
         public List<Dictionary<VehicleSpawner.VehicleSpawnType, string>> currentVehicleList;
         public List<Dictionary<TurretSpawner.TurretSpawnType, string>> currentTurretList;
-        public string currentMap;
         public List<string> currentWeaponList;
         public List<string> currentSkinList;
 
@@ -517,7 +516,6 @@ namespace RavenM
             currentTurretList = new List<Dictionary<TurretSpawner.TurretSpawnType, string>>();
             currentWeaponList = new List<string>();
             currentSkinList = new List<string>();
-            currentMap = "";
             for (int i = 0; i < 2; i++)
             {
                 currentVehicleList.Add( new Dictionary<VehicleSpawner.VehicleSpawnType, string>() );
