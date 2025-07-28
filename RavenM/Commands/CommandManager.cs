@@ -25,7 +25,7 @@ namespace RavenM.Commands
                 allowInLobby: true,
                 allowInGame: true,
                 helpMessage: "Get help of specific command or get all available commands",
-                syntaxMessage: "/help [command name]")
+                syntaxMessage: "/help <command name>")
             {
                 Action = (string originalStringTrimed, bool isLocal) =>
                 {
@@ -220,7 +220,7 @@ namespace RavenM.Commands
                 allowInLobby: true,
                 allowInGame: true,
                 helpMessage: "Unban player, use `@a` to unban all",
-                syntaxMessage: "/unban <(<steamid>|<steam name>)|@a>")
+                syntaxMessage: "/unban (<steamid>|<steam name>|@a)")
             {
                 needSendManually = true,
                 Action = (string originalStringTrimed, bool isLocal) =>
@@ -230,6 +230,7 @@ namespace RavenM.Commands
                     if (targetNameString == "@a")
                     {
                         ChatManager.instance.PushLobbyChatMessage("Unbanned all");
+                        LobbySystem.instance.CurrentBannedMembers.Clear();
                         return;
                     }
 
