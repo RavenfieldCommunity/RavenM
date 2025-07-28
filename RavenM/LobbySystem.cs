@@ -304,9 +304,10 @@ namespace RavenM
             ModManager.instance.loadedMutators.Sort((x, y) => x.name.CompareTo(y.name));
 
             // Map
-            var mapPicker = Traverse.Create(GameObject.FindObjectOfType<MapPicker>(includeInactive:true));
+            var mapPicker = GameObject.FindObjectOfType<MapPicker>(includeInactive:true);
+            var mapPickerTraversed = Traverse.Create(mapPicker);
             mapPicker.shouldReloadEntries = true;
-            mapPicker.Method("OnEnable").GetValue();
+            mapPickerTraversed.Method("OnEnable").GetValue();
 
             if (!LobbySystem.instance.InLobby || !LobbySystem.instance.LobbyDataReady || LobbySystem.instance.IsLobbyOwner || LobbySystem.instance.ModsToDownload.Count > 0)
                 return;
