@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Reflection;
+using System.IO;
+using System.IO.Compression;
 using UnityEngine;
 using Steamworks;
 using HarmonyLib;
@@ -230,7 +232,6 @@ namespace RavenM
 
 
     [HarmonyPatch]
-
     public class ModConfigPatch
     {
         [HarmonyPatch(typeof(VehicleEntryObject), "Select")]
@@ -302,12 +303,6 @@ namespace RavenM
 
             // Sort mutators
             ModManager.instance.loadedMutators.Sort((x, y) => x.name.CompareTo(y.name));
-
-            // Map
-            var mapPicker = GameObject.FindObjectOfType<MapPicker>(includeInactive:true);
-            var mapPickerTraversed = Traverse.Create(mapPicker);
-            mapPicker.shouldReloadEntries = true;
-            mapPickerTraversed.Method("OnEnable").GetValue();
 
             if (!LobbySystem.instance.InLobby || !LobbySystem.instance.LobbyDataReady || LobbySystem.instance.IsLobbyOwner || LobbySystem.instance.ModsToDownload.Count > 0)
                 return;
@@ -1054,15 +1049,39 @@ namespace RavenM
                     if (mapEntryData.GetName() != mapName | isOfficialMap != mapEntryData.IsOfficial())
                     {
                         isChangingList = true;
-                        foreach (var entry in Traverse.Create(FindObjectOfType<MapPicker>(includeInactive: true)).Field("entryPanels").GetValue<List<PickerEntryObject>>())
+                        if(isOfficialMap)
                         {
-                            if (entry.entryData.GetName() == mapName && isOfficialMap == entry.entryData.IsOfficial())
+                            foreach (var entry in FindObjectOfType<MapPicker>(includeInactive: true)._officialEntries)
                             {
-                                entry.Select();
-                                doubleCheck = true; //just to be safe
+                                if (entry != null & entry.GetName() == mapName)
+                                {
+                                    InstantActionConfigMenu.instance.SelectMap(entry);
+                                    doubleCheck = true; //just to be safe
+                                    goto FinishMapSelect;
+                                }
                             }
                         }
-                        isChangingList = false;
+                        else
+                        {
+                            foreach (ModInformation activeMod in ModManager.instance.GetActiveMods())
+                            {
+                                if (activeMod.HasLoadedContent())
+                                {
+                                    foreach (FileInfo map in activeMod.content.GetMaps())
+                                    {
+                                        MapEntryData item = MapEntryData.CreateBasicExternal(map.FullName, activeMod);
+                                        if (item != null & item.GetName() == mapName)
+                                        {
+                                            InstantActionConfigMenu.instance.SelectMap(item);
+                                            doubleCheck = true;
+                                            goto FinishMapSelect;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        FinishMapSelect:
+                             isChangingList = false;
                     }
                 }
 
