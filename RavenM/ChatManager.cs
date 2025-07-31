@@ -95,18 +95,8 @@ namespace RavenM
             get { return _commandManager; }
             set { _commandManager = value; }
         }
-        private KeyCode _globalChatKeybind = KeyCode.Y;
-        public KeyCode GlobalChatKeybind
-        {
-            get { return _globalChatKeybind; }
-            set { _globalChatKeybind = value; }
-        }
-        private KeyCode _teamChatKeybind = KeyCode.U;
-        public KeyCode TeamChatKeybind
-        {
-            get { return _teamChatKeybind; }
-            set { _teamChatKeybind = value; }
-        }
+        public KeyCode GlobalChatKeybind = KeyCode.Y;
+        public KeyCode TeamChatKeybind = KeyCode.U;
 
         /// <summary>
         /// Client's steam id

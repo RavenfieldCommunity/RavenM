@@ -797,7 +797,7 @@ public class IngameNetManager : MonoBehaviour
 
     private void OnGUI()
     {
-        if (!IsClient || !OptionsPatch.showHUD)
+        if (!IsClient || !Settings.showIngameUI.Value)
             return;
         GUI.Label(new Rect(10, 30, 200, 40), $"Inbound: {_pps} PPS");
         GUI.Label(new Rect(10, 50, 200, 40), $"Outbound: {_ppsOut} PPS -- {_bytesOut} Bytes");

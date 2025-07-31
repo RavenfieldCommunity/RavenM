@@ -41,7 +41,7 @@ namespace RavenM
                 return false;
             }
             LobbySystem.instance.NotificationText = "";
-            OptionsPatch.SetConfigValues(false);
+            //OptionsPatch.SetConfigValues(false);
 
             // Only start if all members are ready.
             if (LobbySystem.instance.LobbyDataReady && LobbySystem.instance.IsLobbyOwner)
@@ -1400,13 +1400,17 @@ namespace RavenM
                     GUILayout.Label($"RavenM v{MyPluginInfo.PLUGIN_VERSION}\nClient Id: {Plugin.BuildGUID}");
                     if (GUILayout.Button("Project webpage"))
                         Application.OpenURL("https://ravenfieldcommunity.github.io/docs/en/Projects/ravenm.html");
-                    GUILayout.Label($"S. A.ID: {SteamUtils.GetAppID()}");
-                    try
+                    if (Settings.debugMode.Value)
                     {
-                        var steamIdString = SteamUser.GetSteamID().ToString();
-                        GUILayout.Label($"S. USR.ID: ...{steamIdString.Substring( steamIdString.Length - 3 )}");
-                        GUILayout.Label($"S. USR.N.: {SteamFriends.GetPersonaName()}");
-                    } catch {}
+                        GUILayout.Label($"S. A.ID: {SteamUtils.GetAppID()}");
+                        try
+                        {
+                            var steamIdString = SteamUser.GetSteamID().ToString();
+                            GUILayout.Label($"S. USR.ID: ...{steamIdString.Substring(steamIdString.Length - 3)}");
+                            GUILayout.Label($"S. USR.N.: {SteamFriends.GetPersonaName()}");
+                        }
+                        catch { }
+                    }
                 }
                 // Host config menu
                 else if (GUIStack.Peek() == GUIStackState.Host)

@@ -100,6 +100,7 @@ namespace RavenM
             logger = Logger;
             config = Config;
 
+            Settings.Init();
 
             string[] args = Environment.GetCommandLineArgs();
 
@@ -110,7 +111,7 @@ namespace RavenM
                     Logger.LogWarning($"Plugin {MyPluginInfo.PLUGIN_GUID} is canceled to load!");
                     InitLoadMessage();
                     InitMessageGUI.overwrittenStringToShow = "RavenM unloaded.";
-                    throw new Exception("Cancel load");
+                    Destroy(this);
                 }
             }
 
@@ -228,6 +229,8 @@ namespace RavenM
                 var discordObject = new GameObject();
                 discordObject.AddComponent<DiscordIntegration>();
                 DontDestroyOnLoad(discordObject);
+
+                Settings.OnSettingUpdate();
             }
             this.enabled = false;
         }
