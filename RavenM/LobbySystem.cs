@@ -1063,16 +1063,22 @@ namespace RavenM
                         }
                         else
                         {
-                            foreach (ModInformation activeMod in ModManager.instance.GetActiveMods())
+                            // here some of the code is from original game src
+                            foreach (ModInformation mod in ModManager.instance.GetActiveMods())
                             {
-                                if (activeMod.HasLoadedContent())
+                                if (mod.HasLoadedContent())
                                 {
-                                    foreach (FileInfo map in activeMod.content.GetMaps())
+                                    foreach (FileInfo mapFileInfo in mod.content.GetMaps())
                                     {
-                                        MapEntryData item = MapEntryData.CreateBasicExternal(map.FullName, activeMod);
-                                        if (item != null & item.GetName() == mapName)
+                                        MapEntryData mapData = MapEntryData.CreateBasicExternal(mapFileInfo.FullName, mod);
+                                        Plugin.logger.LogInfo(mapData.sceneName);
+                                        mapData.LoadOrGenerateMetaData(Path.GetFileNameWithoutExtension(mapFileInfo.FullName));
+
+                                        if (mod.HasLoadedContent() && mod.content.HasIconImage() && mod.iconTexture != null)
+                                            mapData.image = Sprite.Create(mod.iconTexture, new Rect(0f, 0f, mod.iconTexture.width, mod.iconTexture.height), Vector2.zero, 100f);
+                                        if (mapData.GetName() == mapName)
                                         {
-                                            InstantActionConfigMenu.instance.SelectMap(item);
+                                            InstantActionConfigMenu.instance.SelectMap(mapData);
                                             doubleCheck = true;
                                             goto FinishMapSelect;
                                         }
@@ -1081,7 +1087,7 @@ namespace RavenM
                             }
                         }
                         FinishMapSelect:
-                             isChangingList = false;
+                            isChangingList = false;
                     }
                 }
 
@@ -1257,12 +1263,12 @@ namespace RavenM
                     return;
                 
                 // manually check by player to start game is better I think
-                /*
+                // no 
                 if (SteamMatchmaking.GetLobbyData(ActualLobbyID, "started") == "yes")
                 {
                     StartAsClient();
                 }
-                */
+                
             }
         }
 
