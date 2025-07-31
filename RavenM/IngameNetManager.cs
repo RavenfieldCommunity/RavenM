@@ -57,6 +57,8 @@ namespace RavenM
             if (IngameNetManager.instance.IsClient & (GameManager.instance.gameModeParameters != null & GameManager.instance.gameModeParameters.playerTeam == -1))
             {
                 __instance.enabled = false;
+                try { LoadoutUi.instance.OnDeployClick(); }
+                catch { }
                 return false;
             }
 
@@ -2726,7 +2728,7 @@ namespace RavenM
             if (!actor.dead && actor.controller.Reload()) flags |= (int)ActorStateFlags.Reload;
             if (actor.dead) flags |= (int)ActorStateFlags.Dead;
             if (actor.aiControlled) flags |= (int)ActorStateFlags.AiControlled;
-            if (!actor.dead && actor.controller.DeployParachute()) flags |= (int)ActorStateFlags.DeployParachute;
+            if (!actor.dead && actor.parachuteDeployed) flags |= (int)ActorStateFlags.DeployParachute;
 
             return flags;
         }
@@ -2832,7 +2834,6 @@ namespace RavenM
                     TargetDetectionProgress = actor.controller is AiActorController aiActorController && aiActorController.slowTargetDetection && aiActorController.HasTarget()
                                              ? aiActorController.targetDetectionProgress : -1f,
                     // what does `actor.canDeployParachute` do ???
-                    ParachuteDeployed = actor.parachuteDeployed
                 };
 
                 bulkActorUpdate.Updates.Add(net_actor);

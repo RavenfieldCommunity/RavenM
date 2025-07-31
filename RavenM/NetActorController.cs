@@ -257,7 +257,7 @@ namespace RavenM
                 actor.activeWeapon.onSpawnProjectiles.RemoveAllListeners();
             }
 
-            if (Targets.ParachuteDeployed) actor.DeployParachute(); // Luckily this method will check if `parachuteDeployed` is `true`
+            if ((Targets.Flags & (int)ActorStateFlags.DeployParachute) != 0) actor.DeployParachute(); // Luckily this method will check if `parachuteDeployed` is `true`
         }
 
         public static WeaponManager.WeaponEntry GetWeaponEntryByHash(int hash)

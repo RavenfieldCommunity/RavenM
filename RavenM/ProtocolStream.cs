@@ -165,7 +165,6 @@ namespace RavenM
             Write(value.Seat);
             Write(value.MovingPlatformVehicleId);
             Write(value.TargetDetectionProgress);
-            Write(value.ParachuteDeployed);
         }
 
         public void Write(ActorFlagsPacket value)
@@ -689,8 +688,7 @@ namespace RavenM
                 VehicleId = ReadInt32(),
                 Seat = ReadInt32(),
                 MovingPlatformVehicleId = ReadInt32(),
-                TargetDetectionProgress = ReadSingle(),
-                ParachuteDeployed = ReadBoolean()
+                TargetDetectionProgress = ReadSingle()
             };
         }
 
