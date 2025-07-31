@@ -912,7 +912,7 @@ namespace RavenM
                 SetLobbyDataDedup("botAmountRaven", instantActionConfigMenu.Field("botAmountRavenIF").GetValue<TMP_InputField>().text);
                 SetLobbyDataDedup("respawnTime", instantActionConfigMenu.Field("respawnTimeIF").GetValue<TMP_InputField>().text);
                 SetLobbyDataDedup("gameLength", instantActionConfigMenu.Field("gameLengthDD").GetValue<TMP_Dropdown>().value.ToString());
-                SetLobbyDataDedup("map", mapEntryData.GetName());
+                SetLobbyDataDedup("map", mapEntryData.IsOfficial() ? mapEntryData.GetName() : new FileInfo(mapEntryData.sceneName).Name );
                 SetLobbyDataDedup("isOfficalMap", mapEntryData.IsOfficial().ToString());
 
                 // For SpecOps.
@@ -1044,20 +1044,19 @@ namespace RavenM
                 {
                     bool isOfficialMap = bool.Parse(SteamMatchmaking.GetLobbyData(ActualLobbyID, "isOfficalMap"));
 
-                    string mapName = SteamMatchmaking.GetLobbyData(ActualLobbyID, "map");
+                    string targetMapName = SteamMatchmaking.GetLobbyData(ActualLobbyID, "map"); // with extension name
 
-                    if (mapEntryData.GetName() != mapName | isOfficialMap != mapEntryData.IsOfficial())
+                    if (mapEntryData.GetName() != targetMapName | isOfficialMap != mapEntryData.IsOfficial())
                     {
                         isChangingList = true;
                         if(isOfficialMap)
                         {
                             foreach (var entry in FindObjectOfType<MapPicker>(includeInactive: true)._officialEntries)
                             {
-                                if (entry != null & entry.GetName() == mapName)
+                                if (entry != null & entry.GetName() == targetMapName)
                                 {
                                     InstantActionConfigMenu.instance.SelectMap(entry);
                                     doubleCheck = true; //just to be safe
-                                    goto FinishMapSelect;
                                 }
                             }
                         }
@@ -1076,7 +1075,7 @@ namespace RavenM
 
                                         if (mod.HasLoadedContent() && mod.content.HasIconImage() && mod.iconTexture != null)
                                             mapData.image = Sprite.Create(mod.iconTexture, new Rect(0f, 0f, mod.iconTexture.width, mod.iconTexture.height), Vector2.zero, 100f);
-                                        if (mapData.GetName() == mapName)
+                                        if (mapFileInfo.Name == targetMapName)
                                         {
                                             InstantActionConfigMenu.instance.SelectMap(mapData);
                                             doubleCheck = true;
