@@ -280,7 +280,9 @@ namespace RavenM
             else if (LobbySystem.instance.IsLobbyOwner)
                 return true;
 
-            if (index == 16 & LobbySystem.instance.isChangingList)
+            if (index == MainMenu.PAGE_INSTANT_ACTION & GameObject.FindObjectOfType<MapPicker>(includeInactive:true).gameObject.activeInHierarchy)
+                return true;
+            if (index == MainMenu.PAGE_TEAM_CONFIG & LobbySystem.instance.isChangingList)
                 return false;
             return true;
         }
@@ -429,6 +431,9 @@ namespace RavenM
 
         public List<PublishedFileId_t> ModsToDownload = new List<PublishedFileId_t>();
 
+        /// <summary>
+        /// Works only when there are mods to download
+        /// </summary>
         public bool LoadedServerMods = false;
 
         public bool RequestModReload = false;
@@ -912,7 +917,7 @@ namespace RavenM
                 SetLobbyDataDedup("botAmountRaven", instantActionConfigMenu.Field("botAmountRavenIF").GetValue<TMP_InputField>().text);
                 SetLobbyDataDedup("respawnTime", instantActionConfigMenu.Field("respawnTimeIF").GetValue<TMP_InputField>().text);
                 SetLobbyDataDedup("gameLength", instantActionConfigMenu.Field("gameLengthDD").GetValue<TMP_Dropdown>().value.ToString());
-                SetLobbyDataDedup("map", mapEntryData.IsOfficial() ? mapEntryData.GetName() : new FileInfo(mapEntryData.sceneName).Name );
+                SetLobbyDataDedup("map", mapEntryData.GetName());
                 SetLobbyDataDedup("isOfficalMap", mapEntryData.IsOfficial().ToString());
 
                 // For SpecOps.
@@ -1038,56 +1043,33 @@ namespace RavenM
                     playerTeamDD.value = int.Parse(SteamMatchmaking.GetLobbyData(ActualLobbyID, "team"));
                 }
 
+                if (!ModManager.instance.contentHasFinishedLoading)
+                    return;
+                
                 bool doubleCheck = false; //fix for entering into the wrong map with midgame joining
-
-                if (instance.LoadedServerMods)
+                bool isTargetOfficialMap = bool.Parse(SteamMatchmaking.GetLobbyData(ActualLobbyID, "isOfficalMap"));
+                string targetMapName = SteamMatchmaking.GetLobbyData(ActualLobbyID, "map"); 
+                if (mapEntryData.GetName() != targetMapName | isTargetOfficialMap != mapEntryData.IsOfficial())
                 {
-                    bool isOfficialMap = bool.Parse(SteamMatchmaking.GetLobbyData(ActualLobbyID, "isOfficalMap"));
-
-                    string targetMapName = SteamMatchmaking.GetLobbyData(ActualLobbyID, "map"); // with extension name
-
-                    if (mapEntryData.GetName() != targetMapName | isOfficialMap != mapEntryData.IsOfficial())
+                    if (!FindObjectOfType<MapPicker>(includeInactive: true).gameObject.activeInHierarchy)
+                        MainMenu.instance.OpenPageIndex(MainMenu.PAGE_MAP_PICKER);
+                    isChangingList = true;
+                    foreach (var entry in Traverse.Create(FindObjectOfType<MapPicker>(includeInactive: true)).Field("entryPanels").GetValue<List<PickerEntryObject>>())
                     {
-                        isChangingList = true;
-                        if(isOfficialMap)
+                        
+                        if (entry.entryData.GetName() == targetMapName && isTargetOfficialMap == entry.entryData.IsOfficial())
                         {
-                            foreach (var entry in FindObjectOfType<MapPicker>(includeInactive: true)._officialEntries)
+                            var warningMessage = "Duplicated map issued, ask host to check whether the map is same together!";
+                            if (doubleCheck & ChatManager.instance.CurrentChatMessage != warningMessage)
+                                ChatManager.instance.PushLobbyChatMessage(warningMessage);
+                            else
                             {
-                                if (entry != null & entry.GetName() == targetMapName)
-                                {
-                                    InstantActionConfigMenu.instance.SelectMap(entry);
-                                    doubleCheck = true; //just to be safe
-                                }
-                            }
+                                entry.Select();
+                                doubleCheck = true; //just to be safe
+                            } 
                         }
-                        else
-                        {
-                            // here some of the code is from original game src
-                            foreach (ModInformation mod in ModManager.instance.GetActiveMods())
-                            {
-                                if (mod.HasLoadedContent())
-                                {
-                                    foreach (FileInfo mapFileInfo in mod.content.GetMaps())
-                                    {
-                                        MapEntryData mapData = MapEntryData.CreateBasicExternal(mapFileInfo.FullName, mod);
-                                        Plugin.logger.LogInfo(mapData.sceneName);
-                                        mapData.LoadOrGenerateMetaData(Path.GetFileNameWithoutExtension(mapFileInfo.FullName));
-
-                                        if (mod.HasLoadedContent() && mod.content.HasIconImage() && mod.iconTexture != null)
-                                            mapData.image = Sprite.Create(mod.iconTexture, new Rect(0f, 0f, mod.iconTexture.width, mod.iconTexture.height), Vector2.zero, 100f);
-                                        if (mapFileInfo.Name == targetMapName)
-                                        {
-                                            InstantActionConfigMenu.instance.SelectMap(mapData);
-                                            doubleCheck = true;
-                                            goto FinishMapSelect;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        FinishMapSelect:
-                            isChangingList = false;
                     }
+                    isChangingList = false;
                 }
 
 
