@@ -23,20 +23,37 @@ public static class Settings
     public static ConfigEntry<KeyboardShortcut> globalChatKeybind;
     public static ConfigEntry<KeyboardShortcut> teamChatKeybind;
     public static ConfigEntry<KeyboardShortcut> placeMarkerKeybind;
+    public static ConfigEntry<float> chatWidth;
+    public static ConfigEntry<float> chatHeight;
+    public static ConfigEntry<float> chatYOffset;
+    public static ConfigEntry<float> chatXOffset;
+    public static ConfigEntry<int> chatFontSize;
+    public static ConfigEntry<string> annoucement;
+    public static ConfigEntry<int> markerAliveTime;
+    public static ConfigEntry<int> chatFieldHiddenDelay;
     public static void Init()
     {
         var config = Plugin.config;
-        debugMode = config.Bind("RavenM.Debug", "Debug mode", false, "");
-        showIngameUI = config.Bind("RavenM.IngameUI", "Show ingame UI", true, "");
-        nameTagFontSize = config.Bind("RavenM.IngameUI.NameTags", "Nametag font size", 12, "");
+        showIngameUI = config.Bind("RavenM.IngameUI", "Show ingame UI", true, "Show all ingame UI including chat field, nametags and others");
+        nameTagFontSize = config.Bind("RavenM.IngameUI.NameTags", "Nametag font size", 32, "");
         enableNameTagCustomColor = config.Bind("RavenM.IngameUI.NameTags", "Nametag custom color", false, "");
         nameTagColorTeam = config.Bind("RavenM.IngameUI.NameTags", "Nametag team color", "#1E90FF", "");
         nameTagColorEnemy = config.Bind("RavenM.IngameUI.NameTags", "Nametag enemy color", "#FFA500", "");
-        voiceChatVolume = config.Bind("RavenM.Chat", "Voice chat volume", 1f, "");
-        voiceChatKeybind = config.Bind("RavenM.Chat", "Voice chat keybind", new KeyboardShortcut(KeyCode.CapsLock), "");
-        globalChatKeybind = config.Bind("RavenM.Chat", "Global chat keybind", new KeyboardShortcut(KeyCode.Y), "");
-        teamChatKeybind = config.Bind("RavenM.Chat", "Team chat keybind", new KeyboardShortcut(KeyCode.U), "");
-        placeMarkerKeybind = config.Bind("RavenM.Chat", "Place marker keybind", new KeyboardShortcut(KeyCode.BackQuote), "");
+        voiceChatVolume = config.Bind("RavenM.Keybinds.Chat", "Voice chat volume", 1f, "");
+        voiceChatKeybind = config.Bind("RavenM.Keybinds.Chat", "Voice chat keybind", new KeyboardShortcut(KeyCode.CapsLock), "");
+        globalChatKeybind = config.Bind("RavenM.Keybinds.Chat", "Global chat keybind", new KeyboardShortcut(KeyCode.Y), "");
+        teamChatKeybind = config.Bind("RavenM.Keybinds.Chat", "Team chat keybind", new KeyboardShortcut(KeyCode.U), "");
+        placeMarkerKeybind = config.Bind("RavenM.Keybinds.Chat", "Place marker keybind", new KeyboardShortcut(KeyCode.BackQuote), "");
+        chatWidth = config.Bind("RavenM.IngameUI.Chat", "Chat Width", 500f, "Chat field width.");
+        chatHeight = config.Bind("RavenM.IngameUI.Chat","Chat field height",200f,"Chat field height.");
+        chatYOffset = config.Bind("RavenM.IngameUI.Chat","Chat field YOffset",370f,"Chat field y-axis position.");
+        chatXOffset = config.Bind("RavenM.IngameUI.Chat","Chat field XOffset",10f,"Chat field x-axis position.");
+        chatFontSize = config.Bind("RavenM.IngameUI.Chat","Chat field font size",0,"Change the font size of chat field(0 is disable).");
+        markerAliveTime = config.Bind("RavenM.Configs","Marker alive time",20,"How long the marker will keep showing by default(0 is disable to hide automatically).");
+        chatFieldHiddenDelay = config.Bind("RavenM.Configs","chat field hidden delay",0,"How long will chat field keep showing after delay when new message received(0 is disable to hide automatically).");
+        debugMode = config.Bind("RavenM.ZDebug", "Debug mode", false, "");
+        annoucement = config.Bind("RavenM.ZDebug.Data", "annoucement", "", "");
+
         config.SettingChanged += (sender, arg) => { Task.Run(OnSettingUpdate); };
     }
 
@@ -48,10 +65,16 @@ public static class Settings
             IngameNetManager.instance.VoiceChatKeybind = voiceChatKeybind.Value.MainKey;
             IngameNetManager.instance.PlaceMarkerKeybind = placeMarkerKeybind.Value.MainKey;
         }
-        if (IngameNetManager.instance != null)
+        if (ChatManager.instance != null)
         {
             ChatManager.instance.GlobalChatKeybind = globalChatKeybind.Value.MainKey;
             ChatManager.instance.TeamChatKeybind = teamChatKeybind.Value.MainKey;
+            ChatManager.instance.chatWidth = chatWidth.Value;
+            ChatManager.instance.chatHeight = chatHeight.Value;
+            ChatManager.instance.chatXOffset = chatXOffset.Value;
+            ChatManager.instance.chatYOffset = chatYOffset.Value;
+            ChatManager.instance.chatFontSize = chatFontSize.Value;
+            ChatManager.instance.chatFieldHiddenDelay = chatFieldHiddenDelay.Value;
         }
         if (GameUI.instance != null) { GameUI.instance.nameTagfontSize = nameTagFontSize.Value; }
     }

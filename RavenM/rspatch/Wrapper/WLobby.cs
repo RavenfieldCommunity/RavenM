@@ -31,15 +31,21 @@ namespace RavenM.RSPatch.Wrapper
         {
             return IngameNetManager.instance.GetPlayers();
         }
+
+        /// <summary>
+        /// Oh local only now
+        /// </summary>
+        /// <param name="message"></param>
+        /// <param name="color"></param>
         public static void SendServerChatMessage(string message, Color color)
         {
             if (!IngameNetManager.instance.IsHost || !LobbySystem.instance.IsLobbyOwner)
             {
                 return;
             }
-            string input = $"<b>Server</b> <color=#{ColorUtility.ToHtmlStringRGB(color)}>{message}</color>";
-            ChatManager.instance.PushChatMessage(null, input, true, -1);
-            
+            string input = $"<color=#{ColorUtility.ToHtmlStringRGB(color)}>{message}</color>";
+            ChatManager.instance.SendLobbyChat($"mod:{message}");
+
             using MemoryStream memoryStream = new MemoryStream();
             var chatPacket = new ChatPacket
             {
@@ -55,6 +61,7 @@ namespace RavenM.RSPatch.Wrapper
             byte[] data = memoryStream.ToArray();
 
             IngameNetManager.instance.SendPacketToServer(data, PacketType.Chat, Constants.k_nSteamNetworkingSend_Reliable);
+            
         }
         public static Dictionary<string, GameObject> GetNetworkPrefabs()
         {

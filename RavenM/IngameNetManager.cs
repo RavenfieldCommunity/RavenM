@@ -846,18 +846,6 @@ namespace RavenM
                 DrawMarker(controller.Targets.MarkerPosition ?? Vector3.zero);
             }
 
-            if (ChatManager.instance.SelectedChatPosition == 1) // Position to the right
-            {
-                ChatManager.instance.CreateChatArea(false, Plugin.chatWidth, Plugin.chatHeight, Plugin.chatYOffset, Plugin.chatXOffset);
-            }
-            else
-            {
-
-                ChatManager.instance.CreateChatArea(false, Plugin.chatWidth, Plugin.chatHeight, Plugin.chatYOffset, Plugin.chatXOffset);
-            }
-
-            // ChatManager.instance.CreateChatArea(false);
-
             if (UsingMicrophone)
                 GUI.DrawTexture(new Rect(315f, Screen.height - 60f, 50f, 50f), MicTexture);
         }
@@ -1161,9 +1149,9 @@ namespace RavenM
 
                                 if ((controller.Flags & (int)ActorStateFlags.AiControlled) == 0)
                                 {
-                                    var leaveMsg = $"{actor.name} has left the match.";
+                                    var leaveMsg = $"{actor.name} has left the map.";
 
-                                    ChatManager.instance.PushChatMessage(null, leaveMsg, true, -1);
+                                    ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, leaveMsg);
 
                                     using MemoryStream memoryStream = new MemoryStream();
                                     var chatPacket = new ChatPacket
@@ -1294,9 +1282,9 @@ namespace RavenM
 
                                                 if ((actor_packet.Flags & (int)ActorStateFlags.AiControlled) == 0)
                                                 {
-                                                    var enterMsg = $"{actor_packet.Name} has joined the match.";
+                                                    var enterMsg = $"{actor_packet.Name} has entered the map.";
 
-                                                    ChatManager.instance.PushChatMessage(null, enterMsg, true, -1);
+                                                    ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, enterMsg);
 
                                                     using MemoryStream memoryStream = new MemoryStream();
                                                     var chatPacket = new ChatPacket
@@ -2143,10 +2131,7 @@ namespace RavenM
                                     var chatPacket = dataStream.ReadChatPacket();
 
                                     var actor = ClientActors.ContainsKey(chatPacket.Id) ? ClientActors[chatPacket.Id] : null;
-                                    if (actor == null)
-                                        ChatManager.instance.PushChatMessage(SteamFriends.GetFriendPersonaName(msg.m_identityPeer.GetSteamID()), chatPacket.Message, true, -1);
-                                    else
-                                        ChatManager.instance.PushChatMessage(actor.name, chatPacket.Message, !chatPacket.TeamOnly, actor.team);
+                                    ChatManager.instance.AppendToChatLink(msg.m_identityPeer.GetSteamID().m_SteamID, chatPacket.Message, teamOnly:!chatPacket.TeamOnly);
                                 }
                                 break;
                             case PacketType.Voip:

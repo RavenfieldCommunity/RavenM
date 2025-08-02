@@ -486,7 +486,12 @@ namespace RavenM
 
         public bool HasCommittedToStart = false;
 
-        public Vector2 guiScrollPosition = Vector2.zero;
+        private Vector2 guiScrollPosition = Vector2.zero;
+        private Vector2 guiScrollPosition2 = Vector2.zero;
+
+        public static string HASH_LOBBYDATA_TEAM_E = "E";
+        public static string HASH_LOBBYDATA_TEAM_R = "R";
+        public static string HASH_LOBBYDATA_TEAM_I = "I";
 
         private void Awake()
         {
@@ -602,8 +607,8 @@ namespace RavenM
             LobbyDataReady = true;
             ActualLobbyID = new CSteamID(pCallback.m_ulSteamIDLobby);
 
-            ChatManager.instance.PushLobbyChatMessage($"Welcome to the lobby! Press {ChatManager.instance.GlobalChatKeybind} or {ChatManager.instance.TeamChatKeybind} to chat.\nUse `/help` for availdable commands.");
-            ChatManager.instance.PushLobbyChatMessage($"");
+            ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, $"Welcome to the lobby! Press {ChatManager.instance.GlobalChatKeybind} or {ChatManager.instance.TeamChatKeybind} to chat.\nUse `/help` for availdable commands.");
+            ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, $"");
 
 
             if (IsLobbyOwner)
@@ -797,6 +802,11 @@ namespace RavenM
             Plugin.logger.LogInfo($"mutators: {SteamMatchmaking.GetLobbyData(ActualLobbyID, "mutators")}");
             Plugin.logger.LogInfo("### LOBBY INFO END ###");
             Plugin.logger.LogInfo("");
+        }
+
+        public string GetLobbyMemberData(CSteamID memberId, string key)
+        {
+            return SteamMatchmaking.GetLobbyMemberData(ActualLobbyID, memberId, key);
         }
 
         public void TriggerModRefresh()
@@ -1666,14 +1676,7 @@ namespace RavenM
             {
                 if (!IngameNetManager.instance.IsClient)
                 {
-                    if (ChatManager.instance.SelectedChatPosition == 1) // Position to the right
-                    {
-
-                        ChatManager.instance.CreateChatArea(true, Plugin.chatWidth, Plugin.chatHeight, Plugin.chatYOffset, Plugin.chatXOffset);
-                    }
-                    else
-                    {
-                        ChatManager.instance.CreateChatArea(true, Plugin.chatWidth, Plugin.chatHeight, Plugin.chatYOffset, Plugin.chatXOffset);
+                }
 
                     }
                 }

@@ -30,11 +30,11 @@ namespace RavenM.RSPatch.Proxy
 
         public static void PushChatMessage(string message)
         {
-            ChatManager.instance.PushChatMessage(ChatManager.instance.SteamUsername, message,true, -1);
+            ChatManager.instance.AppendToChatLink(ChatManager.instance.SteamUsername, message);
         }
         public static void PushCommandChatMessage(string message,Color color,bool teamOnly,bool sendToAll)
         {
-            ChatManager.instance.PushCommandChatMessage(message, color, teamOnly, sendToAll);
+            ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, message, $"#{ColorUtility.ToHtmlStringRGB(color)}");
         }
         public static void SetNameTagForActor(Actor actor, string newName)
         {
