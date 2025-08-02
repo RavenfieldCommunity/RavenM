@@ -16,6 +16,7 @@ namespace RavenM.Commands
         public CommandManager()
         {
             Commands = new List<Command>();
+            // dont push pure text message to remote chat, only after processing
             Commands.Add(new Command(
                 _name: "help",
                 _global: false,
@@ -37,7 +38,7 @@ namespace RavenM.Commands
                         {
                             availableCommandsText = availableCommand.CommandName + " " + availableCommandsText;
                         }
-                        ChatManager.instance.PushLobbyChatMessage($"All available commands, use `/help <command name>` for more details:\n  {availableCommandsText}");
+                        ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, $"All available commands, use `/help <command name>` for more details:\n  {availableCommandsText}");
                         return;
                     }
 
@@ -47,13 +48,13 @@ namespace RavenM.Commands
                     {
                         if (command.CommandName == targetCommandName)
                         {
-                            ChatManager.instance.PushLobbyChatMessage($"{command.SyntaxMessage}\n  {command.HelpMessage}");
+                             ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, $"{command.SyntaxMessage}\n  {command.HelpMessage}");
                             foundCommand = true;
                             break;
                         }
                     }
                     if (!foundCommand)
-                        ChatManager.instance.PushLobbyCommandChatMessage($"Command `{targetCommandName}` not found", Color.red, false, false);
+                        ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, $"Command `{targetCommandName}` not found", ChatManager.HASH_COLOR_RED);
                 }
             }
             );
@@ -75,7 +76,7 @@ namespace RavenM.Commands
                     if (!isLocal)
                     {
                         UI.GameUI.instance.ToggleNameTags();
-                        ChatManager.instance.PushLobbyChatMessage("Set nametags to " + arg);
+                        ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, "Set nametags to " + arg);
                         return;
                     }
 
@@ -95,7 +96,7 @@ namespace RavenM.Commands
 
                     LobbySystem.instance.SetLobbyDataDedup("nameTags", needEnable.ToString());
                     LobbySystem.instance.SetLobbyDataDedup("nameTagsForTeamOnly", isTeamOnly.ToString());
-                    ChatManager.instance.PushLobbyChatMessage("Set nametags to " + outputMessage != null ? outputMessage : arg);
+                    ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, "Set nametags to " + outputMessage != null ? outputMessage : arg);
                     UI.GameUI.instance.ToggleNameTags();
                 }
             }
@@ -121,7 +122,7 @@ namespace RavenM.Commands
                         return;
                     }
                     targetActor.KillSilently();
-                    ChatManager.instance.PushLobbyChatMessage($"Killed actor {targetActor.name}");
+                    ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, $"Killed actor {targetActor.name}");
                 }
             }
             );
@@ -164,7 +165,7 @@ namespace RavenM.Commands
                         {
                             LobbySystem.instance.NotificationText = "You were banned from the lobby!";
                             if (GameManager.IsIngame())
-                                IngameMenuUi.instance.Menu();
+                                IngameMenuUi.instance.Menu();  // Unless this method, others will be blocked by RavenM itself lol
                             else
                                 SteamMatchmaking.LeaveLobby(LobbySystem.instance.ActualLobbyID);
                         }
@@ -177,13 +178,13 @@ namespace RavenM.Commands
                             var memberIda = new CSteamID(memberIdUlong);
                             if (LobbySystem.instance.GetLobbyMembers().Contains(memberIda) && memberIda != LobbySystem.instance.OwnerID)
                             {
-                                ChatManager.instance.PushLobbyChatMessage($"Banned {SteamFriends.GetFriendPersonaName(memberIda)} ({memberIda})");
+                                ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, $"Banned {SteamFriends.GetFriendPersonaName(memberIda)} ({memberIda})");
                                 LobbySystem.instance.CurrentBannedMembers.Add(memberIda);
                                 DelayCloseMemberConnection(memberIda);
                             }
                             else
                             {
-                                ChatManager.instance.PushLobbyCommandChatMessage($"Player `{targetNameString}` is not exist or you are banning youeself", Color.red, false, false);
+                                ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, $"Player `{targetNameString}` is not exist or you are banning youeself", ChatManager.HASH_COLOR_RED);
                             }
                         }
                         else
@@ -194,7 +195,7 @@ namespace RavenM.Commands
                                 if (targetNameString == SteamFriends.GetFriendPersonaName(memberIdb) && memberIdb != LobbySystem.instance.OwnerID)
                                 {
                                     LobbySystem.instance.CurrentBannedMembers.Add(memberIdb);
-                                    ChatManager.instance.PushLobbyCommandChatMessage($"Banned {SteamFriends.GetFriendPersonaName(memberIdb)} ({memberIdb})", Color.white, false, true);
+                                    ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, $"Banned {SteamFriends.GetFriendPersonaName(memberIdb)} ({memberIdb})");
                                     // lol steam sometime wnot sync player's nickname, so sending the user id is better
                                     ChatManager.instance.SendLobbyChat($"/ban {memberIdb}");
                                     DelayCloseMemberConnection(memberIdb);
@@ -204,7 +205,7 @@ namespace RavenM.Commands
                             }
                             if (!targetFound)
                             {
-                                ChatManager.instance.PushLobbyCommandChatMessage($"Player `{targetNameString}` is not exist or you are banning youeself", Color.red, false, false);
+                                ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, $"Player `{targetNameString}` is not exist or you are banning youeself", ChatManager.HASH_COLOR_RED);
                             }
                         }
                     }
@@ -229,7 +230,7 @@ namespace RavenM.Commands
 
                     if (targetNameString == "@a")
                     {
-                        ChatManager.instance.PushLobbyChatMessage("Unbanned all");
+                        ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, "Unbanned all");
                         LobbySystem.instance.CurrentBannedMembers.Clear();
                         return;
                     }
@@ -240,12 +241,12 @@ namespace RavenM.Commands
                         if (LobbySystem.instance.CurrentBannedMembers.Contains(csteamID))
                         {
                             LobbySystem.instance.CurrentBannedMembers.Remove(csteamID);
-                            ChatManager.instance.PushLobbyChatMessage($"Unbanned {SteamFriends.GetFriendPersonaName(csteamID)} ({memberId})");
+                            ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, $"Unbanned {SteamFriends.GetFriendPersonaName(csteamID)} ({memberId})");
                         }
                         else
                         {
                             if (isLocal)
-                                ChatManager.instance.PushLobbyCommandChatMessage($"Player `{targetNameString}` is not exist or you are unbanning youeself", Color.red, false, false);
+                                ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, $"Player `{targetNameString}` is not exist or you are unbanning youeself", ChatManager.HASH_COLOR_RED);
                         }
                     }
                     else
@@ -256,11 +257,11 @@ namespace RavenM.Commands
                             if (SteamFriends.GetFriendPersonaName(memberIdI) == targetNameString)
                             {
                                 LobbySystem.instance.CurrentBannedMembers.Remove(memberIdI);
-                                ChatManager.instance.PushLobbyChatMessage($"Unbanned {targetNameString} ({memberIdI})");
+                                ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, $"Unbanned {targetNameString} ({memberIdI})");
                             }
                         }
                         if (isLocal && !targetFound)
-                            ChatManager.instance.PushLobbyCommandChatMessage($"Player `{targetNameString}` is not exist or you are unbanning youeself", Color.red, false, false);
+                            ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, $"Player `{targetNameString}` is not exist or you are unbanning youeself", ChatManager.HASH_COLOR_RED);
                     }
 
                 }
@@ -294,7 +295,7 @@ namespace RavenM.Commands
                     }
                     if (targetB == null)
                     {
-                        ChatManager.instance.PushLobbyCommandChatMessage("Target B not found", Color.red, false, false);
+                        ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, "Target B not found", ChatManager.HASH_COLOR_RED);
                         throw new Exception("No target B");
                     }
                     Plugin.logger.LogInfo($"Target B to tp: {targetB.name}");
@@ -318,11 +319,12 @@ namespace RavenM.Commands
                     }
                     if (targetsA.Count == 0)
                     {
-                        ChatManager.instance.PushLobbyCommandChatMessage("Target A not found", Color.red, false, false);
+                        ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, "Target A not found", ChatManager.HASH_COLOR_RED);
                         throw new Exception("No target A");
                     }
                     Plugin.logger.LogInfo($"Targets A to tp: {targetsA.Count}");
 
+                    ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, $"Move {targetsAString} to {targetBString}");
                     foreach (var singleA in targetsA)
                     {
                         if (singleA != null && !(singleA.controller as NetActorController) & !singleA.dead && !singleA.IsSeated())
@@ -401,16 +403,17 @@ namespace RavenM.Commands
         }
         private void PrintNotEnoughArguments(Command cmd)
         {
-            ChatManager.instance.PushCommandChatMessage($"Not enough Arguments for Command {cmd.CommandName}. \nUsage: {GetRequiredArgTypes(cmd)}.", Color.red, true, false); ;
+            ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, $"Not enough Arguments for Command {cmd.CommandName}. \nUsage: {GetRequiredArgTypes(cmd)}.", ChatManager.HASH_COLOR_RED);
         }
         private void PrintCouldNotConvert(Command cmd)
         {
-            ChatManager.instance.PushCommandChatMessage($"Could not convert Argument(s) for Command {cmd.CommandName}. \nUsage: {GetRequiredArgTypes(cmd)}.", Color.red, true, false); ;
+            ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, $"Could not convert Argument(s) for Command {cmd.CommandName}. \nUsage: {GetRequiredArgTypes(cmd)}.", ChatManager.HASH_COLOR_RED);
         }
         public bool HasRequiredArgs(Command cmd, string[] command)
         {
             // TODO: is args check needed? as there will be a bug when there are optional args, i think try and catch block is enough
             return true;
+            /*
             // Shift Array by one to the right because command[0] would be the initCommand  - Chryses
             string[] args = new string[command.Length - 1];
             Array.Copy(command, 1, args, 0, command.Length - 1);
@@ -462,6 +465,7 @@ namespace RavenM.Commands
             if (convertedArgCounter == reqArgsCount)
                 return true;
             return false;
+            */
         }
 
 
@@ -484,7 +488,7 @@ namespace RavenM.Commands
         {
             Task.Run(() =>
             {
-                Thread.Sleep(30*1000);
+                Thread.Sleep(10*1000);  // 10s only to close connection forcely
                 foreach (var connection in IngameNetManager.instance.ServerConnections)
                 {
                     if (SteamNetworkingSockets.GetConnectionInfo(connection, out SteamNetConnectionInfo_t pInfo) && pInfo.m_identityRemote.GetSteamID() == id && LobbySystem.instance.CurrentBannedMembers.Contains(id))

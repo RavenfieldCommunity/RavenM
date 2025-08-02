@@ -78,14 +78,6 @@ namespace RavenM
         public static readonly int EXPECTED_BUILD_NUMBER = 32;
 
         private ConfigEntry<bool> configRavenMDevMod;
-        public static float chatWidth = 500f;
-        public static float chatHeight = 200f;
-        public static float chatYOffset = 370f;
-        public static float chatXOffset = 10f;
-        public static int chatFontSize = 0;
-        public static bool allowClientDifference = false;
-        public static bool changeChatFontSize = false;  //If need to change the font size
-
         private ConfigEntry<bool> configRavenMAddToBuiltInMutators;
         private ConfigEntry<string> configRavenMBuiltInMutatorsDirectory;
 
@@ -132,32 +124,6 @@ namespace RavenM
                                                                 "The mutators in the folder will be added automatically as Build In Mutators, this is for testing mutators without having to start the game with mods.");
 
 
-            chatWidth = Config.Bind("General.ChatField",
-                "Chat Width",
-                500f,
-                "Chat field width.").Value;
-            chatHeight = Config.Bind("General.ChatField",
-                "Chat Height",
-                200f,
-                "Chat field height.").Value;
-            chatYOffset = Config.Bind("General.ChatField",
-                "Chat YOffset",
-                370f,
-                "Chat field y-axis position.").Value;
-            chatXOffset = Config.Bind("General.ChatField",
-                "Chat XOffset",
-                10f,
-                "Chat field x-axis position.").Value;
-            chatFontSize = Config.Bind("General.ChatField",
-                "Chat Font Size",
-                0,
-                "Change the font size of chat field(0 is disable).").Value;
-            allowClientDifference = Config.Bind("General.Toggles",
-                "Allow client difference",
-                false,
-                "Allow host and players use plugins or game with different version.").Value;
-            if (chatFontSize != 0)
-                changeChatFontSize = true;
             changeGUID = configRavenMDevMod.Value;
             addToBuiltInMutators = configRavenMAddToBuiltInMutators.Value;
             customBuildInMutators = configRavenMBuiltInMutatorsDirectory.Value;
@@ -229,7 +195,7 @@ namespace RavenM
                 var discordObject = new GameObject();
                 discordObject.AddComponent<DiscordIntegration>();
                 DontDestroyOnLoad(discordObject);
-
+                // Repush settings 
                 Settings.OnSettingUpdate();
             }
             this.enabled = false;
