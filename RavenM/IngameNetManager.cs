@@ -54,7 +54,7 @@ namespace RavenM
     {
         static bool Prefix(BattlePlanUi __instance)
         {
-            if (IngameNetManager.instance.IsClient & (GameManager.instance.gameModeParameters != null & GameManager.instance.gameModeParameters.playerTeam == -1))
+            if (IngameNetManager.instance.IsClient & (ActorManager.instance.player == null | ActorManager.instance.player.team == -1))
             {
                 __instance.enabled = false;
                 try { LoadoutUi.instance.OnDeployClick(); }
@@ -565,6 +565,9 @@ namespace RavenM
 
         public Vector3 MarkerPosition = Vector3.zero;
 
+        /// <summary>
+        /// If the `Time.time` is over this, then cancel this client user's marker
+        /// </summary>
         public float MarkerAppliedUntilTime = 0f;
 
         public bool UsingMicrophone = false;
@@ -576,6 +579,11 @@ namespace RavenM
         public static readonly Dictionary<Tuple<int, ulong>, GameObject> PrefabCache = new Dictionary<Tuple<int, ulong>, GameObject>();
 
         public CommandManager commandManager;
+        /// <summary>
+        /// How many marker we are drawing? Updated every `OnGUI()`
+        /// </summary>
+        public int markerCount = 0;
+        public int voiceCount = 0;
 
         public Type Steamworks_NativeMethods;
 
@@ -675,7 +683,6 @@ namespace RavenM
                 if (hit.point != null)
                 {
                     Plugin.logger.LogInfo($"Placing marker at: {hit.point}");
-                    ChatManager.instance.PushLobbyChatMessage($"Placed a marker (for 10s).", ChatManager.instance.SteamUsername);
 
                     if ((hit.point - MarkerPosition).magnitude > 10)
                     {
@@ -779,6 +786,7 @@ namespace RavenM
         {
             if (worldPos != Vector3.zero)
             {
+                markerCount++;
                 var camera = FpsActorController.instance.inPhotoMode ? SpectatorCamera.instance.camera : FpsActorController.instance.GetActiveCamera();
                 Vector3 vector = camera.WorldToScreenPoint(worldPos);
 
@@ -801,6 +809,9 @@ namespace RavenM
         {
             if (!IsClient || !Settings.showIngameUI.Value)
                 return;
+
+            ChatManager.instance.InteralMessageToAppend2 = $"{(markerCount == 0 ? "" : $"Markers:{markerCount}; ")}{(voiceCount == 0 ? "" : $"Voices:{voiceCount}; ")}";
+
             GUI.Label(new Rect(10, 30, 200, 40), $"Inbound: {_pps} PPS");
             GUI.Label(new Rect(10, 50, 200, 40), $"Outbound: {_ppsOut} PPS -- {_bytesOut} Bytes");
 
@@ -820,6 +831,7 @@ namespace RavenM
                 }
             }
 
+            markerCount = 0;
             DrawMarker(MarkerPosition);
             if (MarkerAppliedUntilTime < Time.time && MarkerPosition != Vector3.zero)
                 MarkerPosition = Vector3.zero;
@@ -1152,7 +1164,7 @@ namespace RavenM
                                     var leaveMsg = $"{actor.name} has left the map.";
 
                                     ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, leaveMsg);
-
+                                    /*
                                     using MemoryStream memoryStream = new MemoryStream();
                                     var chatPacket = new ChatPacket
                                     {
@@ -1169,6 +1181,7 @@ namespace RavenM
 
                                     RavenM.RSPatch.RavenscriptEventsManagerPatch.events.onPlayerDisconnect.Invoke(actor);
                                     SendPacketToServer(data, PacketType.Chat, Constants.k_nSteamNetworkingSend_Reliable);
+                                    */
                                 }
 
                                 {
@@ -1242,6 +1255,8 @@ namespace RavenM
 
                     var packet = packetReader.ReadPacket();
 
+                    voiceCount = 0;
+
                     if (packet.sender != OwnGUID)
                     {
                         _total++;
@@ -1285,7 +1300,7 @@ namespace RavenM
                                                     var enterMsg = $"{actor_packet.Name} has entered the map.";
 
                                                     ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, enterMsg);
-
+                                                    /*
                                                     using MemoryStream memoryStream = new MemoryStream();
                                                     var chatPacket = new ChatPacket
                                                     {
@@ -1301,6 +1316,7 @@ namespace RavenM
                                                     byte[] data = memoryStream.ToArray();
 
                                                     SendPacketToServer(data, PacketType.Chat, Constants.k_nSteamNetworkingSend_Reliable);
+                                                    */
                                                 }
                                             }
 
@@ -2131,7 +2147,7 @@ namespace RavenM
                                     var chatPacket = dataStream.ReadChatPacket();
 
                                     var actor = ClientActors.ContainsKey(chatPacket.Id) ? ClientActors[chatPacket.Id] : null;
-                                    ChatManager.instance.AppendToChatLink(msg.m_identityPeer.GetSteamID().m_SteamID, chatPacket.Message, teamOnly:!chatPacket.TeamOnly);
+                                    ChatManager.instance.AppendToChatLink(msg.m_identityPeer.GetSteamID().m_SteamID, chatPacket.Message, teamOnly: !chatPacket.TeamOnly);
                                 }
                                 break;
                             case PacketType.Voip:
@@ -2157,7 +2173,6 @@ namespace RavenM
 
                                     if (nBytesWritten == 0)
                                         break;
-
                                     var decodedData = new float[nBytesWritten / 2];
                                     for (int i = 0; i < decodedData.Length; i++)
                                     {
@@ -2171,6 +2186,7 @@ namespace RavenM
                                         break;
 
                                     state.VoiceQueue.Add(decodedData);
+                                    voiceCount++;
                                 }
                                 break;
                             case PacketType.VehicleDamage:

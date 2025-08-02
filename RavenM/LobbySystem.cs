@@ -35,7 +35,7 @@ namespace RavenM
     {
         static bool Prefix()
         {
-            if (LobbySystem.instance.InLobby && !LobbySystem.instance.IsLobbyOwner && !LobbySystem.instance.ReadyToPlay)
+            if (LobbySystem.instance.InLobby && !LobbySystem.instance.IsLobbyOwner && !LobbySystem.instance.ReadyToPlay && SteamMatchmaking.GetLobbyData(LobbySystem.instance.ActualLobbyID, "started") != "yes")
             {
                 LobbySystem.instance.NotificationText = "Please wait for host to start game...";
                 return false;
@@ -512,7 +512,6 @@ namespace RavenM
             Callback<LobbyDataUpdate_t>.Create(OnLobbyData);
 
             CleanModConfigList();
-            AllowClientDifference = Plugin.allowClientDifference;
         }
 
         public void CleanModConfigList()
@@ -1061,7 +1060,8 @@ namespace RavenM
                 string targetMapName = SteamMatchmaking.GetLobbyData(ActualLobbyID, "map"); 
                 if (mapEntryData.GetName() != targetMapName | isTargetOfficialMap != mapEntryData.IsOfficial())
                 {
-                    if (!FindObjectOfType<MapPicker>(includeInactive: true).gameObject.activeInHierarchy)
+                    var mapPicker = FindObjectOfType<MapPicker>(includeInactive: true);
+                    if (!mapPicker.gameObject.activeInHierarchy & mapPicker.shouldReloadEntries)
                         MainMenu.instance.OpenPageIndex(MainMenu.PAGE_MAP_PICKER);
                     isChangingList = true;
                     foreach (var entry in Traverse.Create(FindObjectOfType<MapPicker>(includeInactive: true)).Field("entryPanels").GetValue<List<PickerEntryObject>>())
@@ -1069,9 +1069,8 @@ namespace RavenM
                         
                         if (entry.entryData.GetName() == targetMapName && isTargetOfficialMap == entry.entryData.IsOfficial())
                         {
-                            var warningMessage = "Duplicated map issued, ask host to check whether the map is same together!";
-                            if (doubleCheck & ChatManager.instance.CurrentChatMessage != warningMessage)
-                                ChatManager.instance.PushLobbyChatMessage(warningMessage);
+                            if (doubleCheck)
+                                ChatManager.instance.InteralMessageToAppend = "Duplicated map issued, ask host to check whether the map is same together!";
                             else
                             {
                                 entry.Select();
@@ -1273,6 +1272,16 @@ namespace RavenM
                 var menu_page = (int)typeof(MainMenu).GetField("page", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(MainMenu.instance);
                 if (menu_page != MainMenu.PAGE_INSTANT_ACTION)
                     return;
+                else
+                {
+                    if (GUI.Button(new Rect(7, (Screen.height - 70) * 0.97f, 150, 30f), "Multiplayer") & !InLobby)
+                    {
+                        if (GUIStack.Count == 0)
+                            GUIStack.Push(GUIStackState.Main);
+                        else
+                            GUIStack.Clear();
+                    }
+                }
             }
 
             var lobbyStyle = new GUIStyle(GUI.skin.box);
@@ -1350,9 +1359,10 @@ namespace RavenM
                 GUILayout.EndArea();
             }
 
+            var windowRect = new Rect(10f, 10f, 150f, 500f);
             if (!InLobby && GUIStack.Count != 0 && GameManager.IsInMainMenu())
             {
-                GUILayout.BeginArea(new Rect(10f, 10f, 150f, 540f), string.Empty);
+                GUILayout.BeginArea(windowRect, string.Empty);
                 GUILayout.BeginVertical(lobbyStyle);
 
                 // title and main buttons must be spaced in 15f
@@ -1402,6 +1412,7 @@ namespace RavenM
                         }
                         catch { }
                     }
+
                 }
                 // Host config menu
                 else if (GUIStack.Peek() == GUIStackState.Host)
@@ -1434,7 +1445,6 @@ namespace RavenM
                         GUIStack.Pop();
 
                     GUILayout.Space(3f);
-
 
                     GUILayout.BeginHorizontal();
                     GUILayout.FlexibleSpace();
@@ -1485,7 +1495,7 @@ namespace RavenM
                     GUILayout.Label($"LOBBY NOTE:");
                     GUILayout.FlexibleSpace();
                     GUILayout.EndHorizontal();
-                    guiScrollPosition = GUILayout.BeginScrollView(guiScrollPosition, GUILayout.Height(40));
+                    guiScrollPosition2 = GUILayout.BeginScrollView(guiScrollPosition2, GUILayout.Height(40));
                     LobbyNote = GUILayout.TextArea(LobbyNote);
                     GUILayout.EndScrollView();
                 }
@@ -1678,10 +1688,7 @@ namespace RavenM
                 {
                 }
 
-                    }
-                }
-
-                GUILayout.BeginArea(new Rect(10f, 10f, 150f, 540f), string.Empty);
+                GUILayout.BeginArea(windowRect, string.Empty);
                 GUILayout.BeginVertical(lobbyStyle);
 
                 GUILayout.BeginHorizontal();

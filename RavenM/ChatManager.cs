@@ -34,6 +34,7 @@ namespace RavenM
         /// </summary>
         public string LastChatMessage = string.Empty;
 
+        // TODO: these two fields need to udpated by `Udpate()` not static changes?
         /// <summary>
         /// For command intelligencement and warning
         /// </summary>
@@ -198,7 +199,7 @@ namespace RavenM
         {
             string team = LobbySystem.instance.GetLobbyMemberData(new CSteamID(userId), "team");
             string clientTeam = LobbySystem.instance.GetLobbyMemberData(SteamId, "team");
-            bool isUserRealEnemyTeam = team != clientTeam & team != LobbySystem.HASH_LOBBYDATA_TEAM_I;
+            bool isUserRealEnemyTeam = userId == HASH_USER_NULL ? false : team != clientTeam & team != LobbySystem.HASH_LOBBYDATA_TEAM_I;
 
             if (isUserRealEnemyTeam)
                 return;
