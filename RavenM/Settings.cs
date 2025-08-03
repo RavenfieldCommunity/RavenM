@@ -29,6 +29,7 @@ public static class Settings
     public static ConfigEntry<float> chatXOffset;
     public static ConfigEntry<int> chatFontSize;
     public static ConfigEntry<string> tipsAnnoucement;
+    public static ConfigEntry<string> lastGetTipsAnnoucementDate;
     public static ConfigEntry<int> markerAliveTime;
     public static ConfigEntry<int> chatFieldHiddenDelay;
     public static ConfigEntry<bool> showTipsAnnouncement;
@@ -54,7 +55,8 @@ public static class Settings
         chatFieldHiddenDelay = config.Bind("RavenM.Configs","Chat field hidden delay",0,"How long will chat field keep showing after delay when new message received(0 is disable to hide automatically).");
         showTipsAnnouncement = config.Bind("RavenM.Configs","Show tips announcement", true,"");
         debugMode = config.Bind("RavenM.ZDebug", "Debug mode", false, "");
-        tipsAnnoucement = config.Bind("RavenM.ZDebug.Data", "annoucement", "Remember to check updates on our site often!\n---\nThank all testers in discord server for debugging!", "");
+        tipsAnnoucement = config.Bind("RavenM.ZDebug.Data", "tipsAnnoucement", "Remember to check updates on our site often!\n---\nThank all testers in discord server for debugging!", "");
+        lastGetTipsAnnoucementDate = config.Bind("RavenM.ZDebug.Data", "lastGetTipsAnnoucementDate", "", "");
 
         config.SettingChanged += (sender, arg) => { Task.Run(OnSettingUpdate); };
     }

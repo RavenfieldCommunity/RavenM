@@ -1695,7 +1695,7 @@ namespace RavenM
                 GUILayout.EndVertical();
                 GUILayout.EndArea();
             }
-            if (Settings.showTipsAnnouncement.Value & GUIStack.Count != 0 && GUIStack.Peek() == GUIStackState.Main)
+            if (Settings.showTipsAnnouncement.Value && Settings.tipsAnnoucement.Value != "" && GUIStack.Count != 0 && GUIStack.Peek() == GUIStackState.Main)
             {
                 GUILayout.BeginArea(windowRectForAnnouncement);
                 GUILayout.BeginVertical();

@@ -7,6 +7,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
+using System.IO;
+using System.Net;
+using System.Threading.Tasks;
+using SimpleJSON;
 namespace RavenM
 {
     /// <summary>
@@ -66,11 +70,11 @@ namespace RavenM
             {
                 if (!changeGUID)
                 {
-                    return $"INDEV-EA{(GameManager.instance == null ? 0 : GameManager.instance.buildNumber)}-{MyPluginInfo.PLUGIN_VERSION.Replace(".","-")}-{Assembly.GetExecutingAssembly().ManifestModule.ModuleVersionId.ToString().Split('-').Last()}";
+                    return $"INDEV-EA{(GameManager.instance == null ? 0 : GameManager.instance.buildNumber)}-{MyPluginInfo.PLUGIN_VERSION.Replace(".", "-")}-{Assembly.GetExecutingAssembly().ManifestModule.ModuleVersionId.ToString().Split('-').Last()}";
                 }
                 else
                 {
-                    return $"TESTMODE-EA{(GameManager.instance == null ? 0 : GameManager.instance.buildNumber)}-{MyPluginInfo.PLUGIN_VERSION.Replace(".","-")}-89a27d9e2fcb";
+                    return $"TESTMODE-EA{(GameManager.instance == null ? 0 : GameManager.instance.buildNumber)}-{MyPluginInfo.PLUGIN_VERSION.Replace(".", "-")}-89a27d9e2fcb";
                 }
             }
         }
@@ -164,6 +168,53 @@ namespace RavenM
                 }
             }
             InitLoadMessage();
+            
+            Task.Run(() =>
+            {
+                try
+                {
+                    var result = DateTime.TryParse(Settings.lastGetTipsAnnoucementDate.Value, out var lastTime);
+                    if (Settings.showTipsAnnouncement.Value && result != false && DateTime.Now - lastTime < TimeSpan.FromDays(7))
+                    {
+                        Logger.LogInfo("Skip fetch tips annoucement");
+                        return;
+                    }
+                    JSONNode GetJson(string url)
+                    {
+                        return JSON.Parse(new StreamReader(MakeRequest(url)).ReadToEnd());
+                    }
+                    JSONNode json = null;
+                    try { json = GetJson("https://api.github.com/repos/RavenfieldCommunity/RavenM/releases/237069307"); }
+                    catch(Exception e)
+                    {
+                        Logger.LogError(e);
+                    }
+                    if (json != null && json["tag_name"] == "tips") Settings.tipsAnnoucement.Value = json["body"];
+                    else
+                    {
+                        try { json = GetJson("https://api.github.com/repos/RavenfieldCommunity/RavenM/releases/237069307"); }
+                        catch (Exception e)
+                        {
+                            Logger.LogError(e);
+                        }
+                        var count = 0;
+                        while (json != null && json[count] != null && count < 30)
+                        {
+                            if (json[count]["tag_name"] == "tips")
+                            {
+                                Settings.tipsAnnoucement.Value = json[count]["body"];
+                                break;
+                            }
+                            count++;
+                        }
+                    }
+                    Settings.lastGetTipsAnnoucementDate.Value = DateTime.Now.ToString();
+                }
+                catch (Exception e)
+                {
+                    Logger.LogError(e);
+                }
+            });
         }
 
         public void printConsole(string message)
@@ -215,6 +266,17 @@ namespace RavenM
             LobbySystem.instance.IsLobbyOwner = false;
             LobbySystem.instance.LobbyDataReady = false;
         }
+        
+        private Stream MakeRequest(string url)
+        {
+            var req = (HttpWebRequest)WebRequest.Create(url);
+            req.Method = "GET";
+            req.Accept = "application/vnd.github+json";
+            req.UserAgent = "Def-Not-RavenM";
+            req.Timeout = 5000;
+
+            return req.GetResponse().GetResponseStream();
+        }
     }
 
     public class InitMessageGUI : MonoBehaviour
@@ -229,9 +291,14 @@ namespace RavenM
         public void OnGUI()
         {
             if (maxlifetime < Time.time) Destroy(this);
-            var rect = new Rect(10, Screen.height - 20, 400, 40);
+            var rect = new Rect(10, Screen.height - 20, Screen.width, 40);
             if (overwrittenStringToShow == null)
-                GUI.Label(rect, "RavenM loaded, press `M` to show UI on Instant Actions Menu.");
+            {
+                if (GameManager.instance == null || GameManager.instance.buildNumber == Plugin.EXPECTED_BUILD_NUMBER)
+                    GUI.Label(rect, "RavenM loaded, press `M` to show UI on Instant Actions Menu.");
+                else
+                    GUI.Label(rect, $"RavenM may not work on EA{GameManager.instance.buildNumber}, require EA{Plugin.EXPECTED_BUILD_NUMBER}. press `M` to show UI on Instant Actions Menu.");
+            }
             else
                 GUI.Label(rect, $"{overwrittenStringToShow}");
         }
