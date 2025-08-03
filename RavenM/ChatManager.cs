@@ -197,7 +197,7 @@ namespace RavenM
         /// </summary>
         public void AppendToChatLink(ulong userId, string message, string colorString = "white", bool teamOnly = false)
         {
-            string team = LobbySystem.instance.GetLobbyMemberData(new CSteamID(userId), "team");
+            string team = userId == HASH_USER_NULL ? "" : LobbySystem.instance.GetLobbyMemberData(new CSteamID(userId), "team");
             string clientTeam = LobbySystem.instance.GetLobbyMemberData(SteamId, "team");
             bool isUserRealEnemyTeam = userId == HASH_USER_NULL ? false : team != clientTeam & team != LobbySystem.HASH_LOBBYDATA_TEAM_I;
 
@@ -209,16 +209,13 @@ namespace RavenM
                 else if (isUserRealEnemyTeam) colorString = "red";
             }
 
-            string nameHeadProcessed = userId == HASH_USER_NULL ? "" : System.Text.RegularExpressions.Regex.Unescape(SteamFriends.GetFriendPersonaName(new CSteamID(userId)));
+            string nameHeadProcessed = $"{(userId == HASH_USER_NULL ? "" : System.Text.RegularExpressions.Regex.Unescape(SteamFriends.GetFriendPersonaName(new CSteamID(userId))))}{(teamOnly  ? "|team" : "")}";
 
             FinalAppendToChatLink(nameHeadProcessed, message, colorString);
         }
 
         public void AppendToChatLink(string nameHead, string message, string colorString = "white")
         {
-            // add team condition
-            string nameHeadProcessed = nameHead;
-
             FinalAppendToChatLink(nameHead, message, colorString);
         }
 
@@ -329,7 +326,7 @@ namespace RavenM
             string[] commands = CommandManager.SplitSingleArgument(messageTrimed);
             if (commands.Length < 1)
             {
-                AppendToChatLink(HASH_USER_NULL, $"Syntax error", HASH_COLOR_RED);
+                AppendToChatLink($"Syntax error", HASH_COLOR_RED);
                 return;
             }
             
@@ -337,20 +334,20 @@ namespace RavenM
             Command cmd = CommandManager.GetCommandFromName(targetCommandName);
             if (!CommandManager.ContainsCommand(targetCommandName))
             {
-                AppendToChatLink(HASH_USER_NULL, $"Unknown command `{targetCommandName}`", HASH_COLOR_RED);
+                AppendToChatLink($"Unknown command `{targetCommandName}`", HASH_COLOR_RED);
                 return;
             }
 
             if (!(cmd.AllowInLobby && !GameManager.IsIngame()) && !(cmd.AllowInGame && GameManager.IsIngame()))
             {
-                AppendToChatLink(HASH_USER_NULL, cmd.AllowInGame ? $"Command `{targetCommandName}` is disabled when not in gaming" : $"Command `{targetCommandName}` is disabled in gaming", HASH_COLOR_RED);
+                AppendToChatLink(cmd.AllowInGame ? $"Command `{targetCommandName}` is disabled when not in gaming" : $"Command `{targetCommandName}` is disabled in gaming", HASH_COLOR_RED);
                 return;
             }
 
             bool hasCommandPermission = CommandManager.HasPermission(cmd, id, local);
             if (!CommandManager.HasPermission(cmd, id, local))
             {
-                AppendToChatLink(0, $"Access denied with command `{targetCommandName}`", HASH_COLOR_RED);
+                AppendToChatLink($"Access denied with command `{targetCommandName}`", HASH_COLOR_RED);
                 return;
             }
 
@@ -366,7 +363,7 @@ namespace RavenM
             {
                 Plugin.logger.LogError(e.ToString());
                 if (local) // if the command isnt from local, then no need to push message to chat field
-                    AppendToChatLink(HASH_USER_NULL, cmd.SyntaxMessage, HASH_COLOR_RED);
+                    AppendToChatLink(cmd.SyntaxMessage, HASH_COLOR_RED);
             }
 
             if (cmd.Global == true && local == true && !cmd.needSendManually)
@@ -531,7 +528,7 @@ namespace RavenM
                 if (chatFontSize != 0)
                     GUILayout.Label($"<size={chatFontSize}>{FullChatLink}\n{InteralMessageToAppend2}\n{InteralMessageToAppend}</size>", textStyle, GUILayout.Width(chatWidth - 30f));
                 else
-                    GUILayout.Label(FullChatLink, textStyle, GUILayout.Width(chatWidth - 30f));
+                    GUILayout.Label($"{FullChatLink}\n{InteralMessageToAppend2}\n{InteralMessageToAppend}", textStyle, GUILayout.Width(chatWidth - 30f));
             }
             GUILayout.EndScrollView();
             GUILayout.Space(10);

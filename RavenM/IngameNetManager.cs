@@ -782,7 +782,7 @@ namespace RavenM
             PrefabCache[new Tuple<int, ulong>(tag.NameHash, tag.Mod)] = prefab;
         }
 
-        private void DrawMarker(Vector3 worldPos)
+        private void DrawMarker(Vector3 worldPos, string markerOwner)
         {
             if (worldPos != Vector3.zero)
             {
@@ -791,17 +791,33 @@ namespace RavenM
                 Vector3 vector = camera.WorldToScreenPoint(worldPos);
 
                 if (vector.z > 0.5f)
+                {
                     if (vector.x >= 0 && vector.x < Screen.width)
+                    {
                         GUI.DrawTexture(new Rect(vector.x - 15f, Screen.height - vector.y, 30f, 30f), MarkerTexture);
+                        GUI.Label(new Rect(vector.x - 15f, Screen.height - vector.y + 9, 30f, 30f), markerOwner);
+                    }
                     else if (vector.x > Screen.width / 2)
+                    {
                         GUI.DrawTexture(new Rect(Screen.width - 60f, Mathf.Clamp(Screen.height - vector.y, 0, Screen.height - 50f), 50f, 50f), RightMarker);
+                        GUI.Label(new Rect(Screen.width - 60f, Mathf.Clamp(Screen.height - vector.y, 0, Screen.height - 50f) + 9, 50f, 50f), markerOwner);
+                    }
                     else
+                    {
                         GUI.DrawTexture(new Rect(10f, Mathf.Clamp(Screen.height - vector.y, 0, Screen.height - 50f), 50f, 50f), LeftMarker);
-                else
-                    if (Vector3.Dot(camera.transform.right, worldPos - camera.transform.position) < 0)
+                        GUI.Label(new Rect(10f, Mathf.Clamp(Screen.height - vector.y, 0, Screen.height - 50f) + 9, 50f, 50f), markerOwner);
+                    }
+                }
+                else if (Vector3.Dot(camera.transform.right, worldPos - camera.transform.position) < 0)
+                {
                     GUI.DrawTexture(new Rect(10f, 0f, 50f, 50f), LeftMarker);
+                    GUI.Label(new Rect(10f, 0f + 9, 50f, 50f), markerOwner);
+                }
                 else
+                {
                     GUI.DrawTexture(new Rect(Screen.width - 60f, 0f, 50f, 50f), RightMarker);
+                    GUI.Label(new Rect(Screen.width - 60f, 0f + 9, 50f, 50f), markerOwner);
+                }
             }
         }
 
@@ -810,7 +826,7 @@ namespace RavenM
             if (!IsClient || !Settings.showIngameUI.Value)
                 return;
 
-            ChatManager.instance.InteralMessageToAppend2 = $"{(markerCount == 0 ? "" : $"Markers:{markerCount}; ")}{(voiceCount == 0 ? "" : $"Voices:{voiceCount}; ")}";
+            ChatManager.instance.InteralMessageToAppend2 = $"{(markerCount == 0 ? "" : $"Markers: {markerCount}; ")}{(voiceCount == 0 ? "" : $"Voices: {voiceCount}; ")}";
 
             GUI.Label(new Rect(10, 30, 200, 40), $"Inbound: {_pps} PPS");
             GUI.Label(new Rect(10, 50, 200, 40), $"Outbound: {_ppsOut} PPS -- {_bytesOut} Bytes");
@@ -832,10 +848,9 @@ namespace RavenM
             }
 
             markerCount = 0;
-            DrawMarker(MarkerPosition);
+            DrawMarker(MarkerPosition, ChatManager.instance.SteamUsername);
             if (MarkerAppliedUntilTime < Time.time && MarkerPosition != Vector3.zero)
                 MarkerPosition = Vector3.zero;
-
 
             foreach (var kv in ClientActors)
             {
@@ -855,7 +870,7 @@ namespace RavenM
 
                 if (actor.team != GameManager.PlayerTeam())
                     continue;
-                DrawMarker(controller.Targets.MarkerPosition ?? Vector3.zero);
+                DrawMarker(controller.Targets.MarkerPosition ?? Vector3.zero, actor.name);
             }
 
             if (UsingMicrophone)

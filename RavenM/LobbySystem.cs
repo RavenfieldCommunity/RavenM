@@ -324,6 +324,8 @@ namespace RavenM
             if (LobbySystem.instance.LoadedServerMods)
                 LobbySystem.instance.RequestModReload = true;
             LobbySystem.instance.IsLobbyOwner = false;
+            LobbySystem.instance.shouldHideInLobbyMenu = false;
+            LobbySystem.instance.shouldShowInLobbyMoreOptions = false;
 
             ChatManager.instance.ResetChat();
         }
@@ -486,6 +488,12 @@ namespace RavenM
 
         public bool HasCommittedToStart = false;
 
+        /// <summary>
+        /// Control to hide that menu in lobby
+        /// </summary>
+        public bool shouldHideInLobbyMenu = false;
+        public bool shouldShowInLobbyMoreOptions = false;
+
         private Vector2 guiScrollPosition = Vector2.zero;
         private Vector2 guiScrollPosition2 = Vector2.zero;
 
@@ -514,6 +522,11 @@ namespace RavenM
             CleanModConfigList();
         }
 
+        public void CheckAndApplyTipsAnnouncement()
+        {
+            // TO DO
+        }
+
         public void CleanModConfigList()
         {
             currentVehicleList = new List<Dictionary<VehicleSpawner.VehicleSpawnType, string>>();
@@ -522,8 +535,8 @@ namespace RavenM
             currentSkinList = new List<string>();
             for (int i = 0; i < 2; i++)
             {
-                currentVehicleList.Add( new Dictionary<VehicleSpawner.VehicleSpawnType, string>() );
-                currentTurretList.Add( new Dictionary<TurretSpawner.TurretSpawnType, string>() );
+                currentVehicleList.Add(new Dictionary<VehicleSpawner.VehicleSpawnType, string>());
+                currentTurretList.Add(new Dictionary<TurretSpawner.TurretSpawnType, string>());
                 foreach (var type in VehicleSpawner.ALL_VEHICLE_TYPES)
                 {
                     currentVehicleList[i].Add(type, null);
@@ -1360,6 +1373,8 @@ namespace RavenM
             }
 
             var windowRect = new Rect(10f, 10f, 150f, 500f);
+            var windowRectForAnnouncement = new Rect(160f, 10f, 150f, 500f);
+            var windowRectForHiddenInLobbyMenu = new Rect(10f, 10f, 150f, 32f);
             if (!InLobby && GUIStack.Count != 0 && GameManager.IsInMainMenu())
             {
                 GUILayout.BeginArea(windowRect, string.Empty);
@@ -1412,7 +1427,6 @@ namespace RavenM
                         }
                         catch { }
                     }
-
                 }
                 // Host config menu
                 else if (GUIStack.Peek() == GUIStackState.Host)
@@ -1681,6 +1695,17 @@ namespace RavenM
                 GUILayout.EndVertical();
                 GUILayout.EndArea();
             }
+            if (Settings.showTipsAnnouncement.Value & GUIStack.Count != 0 && GUIStack.Peek() == GUIStackState.Main)
+            {
+                GUILayout.BeginArea(windowRectForAnnouncement);
+                GUILayout.BeginVertical();
+                GUILayout.Label("TIPS");
+                guiScrollPosition = GUILayout.BeginScrollView(guiScrollPosition);
+                GUILayout.TextArea(Settings.tipsAnnoucement.Value);
+                GUILayout.EndScrollView();
+                GUILayout.EndVertical();
+                GUILayout.EndArea();
+            }
 
             if (InLobby && LobbyDataReady)
             {
@@ -1688,16 +1713,22 @@ namespace RavenM
                 {
                 }
 
-                GUILayout.BeginArea(windowRect, string.Empty);
+                GUILayout.BeginArea(shouldHideInLobbyMenu ? windowRectForHiddenInLobbyMenu : windowRect, string.Empty);
                 GUILayout.BeginVertical(lobbyStyle);
 
                 GUILayout.BeginHorizontal();
                 GUILayout.FlexibleSpace();
-                GUILayout.Label($"{SteamMatchmaking.GetLobbyData(ActualLobbyID, "lobbyname")}");
+                if (GUILayout.Button(shouldShowInLobbyMoreOptions ? "<" : "..."))
+                    shouldShowInLobbyMoreOptions = !shouldShowInLobbyMoreOptions;
+                if (GUILayout.Button($"{(shouldHideInLobbyMenu ? "HIDDEN - RavenM" : SteamMatchmaking.GetLobbyData(ActualLobbyID, "lobbyname"))}"))
+                {
+                    shouldHideInLobbyMenu = !shouldHideInLobbyMenu;
+                }
                 GUILayout.FlexibleSpace();
                 GUILayout.EndHorizontal();
-
                 GUILayout.Space(15f);
+                if (shouldHideInLobbyMenu)
+                    goto CancelShowingInLobbbyDetail;
 
                 if (GameManager.IsInMainMenu() && GUILayout.Button("LEAVE"))
                 {
@@ -1715,7 +1746,6 @@ namespace RavenM
                 if (GUILayout.Button("COPY ID"))
                 {
                     GUIUtility.systemCopyBuffer = ActualLobbyID.GetAccountID().ToString();
-                    LobbyDataToLogInfo();
                 }
                 GUILayout.FlexibleSpace();
                 GUILayout.EndHorizontal();
@@ -1733,7 +1763,7 @@ namespace RavenM
                     GUILayout.Label($"MODS: {modCount} | {modSize}");
                 GUILayout.FlexibleSpace();
                 GUILayout.EndHorizontal();
-                
+
                 var members = GetLobbyMembers();
                 int len = members.Count;
                 GUILayout.BeginHorizontal();
@@ -1744,6 +1774,16 @@ namespace RavenM
 
 
                 guiScrollPosition = GUILayout.BeginScrollView(guiScrollPosition, GUILayout.Height(250));
+                if (shouldShowInLobbyMoreOptions)
+                {
+                    if (Settings.debugMode.Value)
+                    {
+                        if(GUILayout.Button("Dump lobby info"))
+                            LobbyDataToLogInfo();
+                    }
+                    GUILayout.Label("Nothing :(");
+                    goto CancelShowInLobbyMenu;
+                }
                 for (int i = 0; i < len; i++)
                 {
                     var memberId = members[i];
@@ -1763,10 +1803,10 @@ namespace RavenM
                                 if (actor.name.ToLower() == name.ToLower())
                                     readyColor = actor.dead ? "#fbff00" : "00FF00";
                             }
-                    else
-                        readyColor = (GameManager.IsInMainMenu() ? SteamMatchmaking.GetLobbyMemberData(ActualLobbyID, memberId, "loaded") == "yes"
-                                                                    : SteamMatchmaking.GetLobbyMemberData(ActualLobbyID, memberId, "ready") == "yes")
-                                                                    ? "#00FF00" : "red";
+                        else
+                            readyColor = (GameManager.IsInMainMenu() ? SteamMatchmaking.GetLobbyMemberData(ActualLobbyID, memberId, "loaded") == "yes"
+                                                                        : SteamMatchmaking.GetLobbyMemberData(ActualLobbyID, memberId, "ready") == "yes")
+                                                                        ? "#00FF00" : "red";
 
 
                     if (memberId != SelectedMemberPrompt)
@@ -1809,8 +1849,10 @@ namespace RavenM
                             SelectedMemberPrompt = CSteamID.Nil;
                     }
                 }
+                CancelShowInLobbyMenu:
                 GUILayout.EndScrollView();
 
+            CancelShowingInLobbbyDetail:
                 GUILayout.EndVertical();
                 GUILayout.EndArea();
 

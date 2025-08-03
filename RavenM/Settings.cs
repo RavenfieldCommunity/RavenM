@@ -28,9 +28,10 @@ public static class Settings
     public static ConfigEntry<float> chatYOffset;
     public static ConfigEntry<float> chatXOffset;
     public static ConfigEntry<int> chatFontSize;
-    public static ConfigEntry<string> annoucement;
+    public static ConfigEntry<string> tipsAnnoucement;
     public static ConfigEntry<int> markerAliveTime;
     public static ConfigEntry<int> chatFieldHiddenDelay;
+    public static ConfigEntry<bool> showTipsAnnouncement;
     public static void Init()
     {
         var config = Plugin.config;
@@ -50,9 +51,10 @@ public static class Settings
         chatXOffset = config.Bind("RavenM.IngameUI.Chat","Chat field XOffset",10f,"Chat field x-axis position.");
         chatFontSize = config.Bind("RavenM.IngameUI.Chat","Chat field font size",0,"Change the font size of chat field(0 is disable).");
         markerAliveTime = config.Bind("RavenM.Configs","Marker alive time",20,"How long the marker will keep showing by default(0 is disable to hide automatically).");
-        chatFieldHiddenDelay = config.Bind("RavenM.Configs","chat field hidden delay",0,"How long will chat field keep showing after delay when new message received(0 is disable to hide automatically).");
+        chatFieldHiddenDelay = config.Bind("RavenM.Configs","Chat field hidden delay",0,"How long will chat field keep showing after delay when new message received(0 is disable to hide automatically).");
+        showTipsAnnouncement = config.Bind("RavenM.Configs","Show tips announcement", true,"");
         debugMode = config.Bind("RavenM.ZDebug", "Debug mode", false, "");
-        annoucement = config.Bind("RavenM.ZDebug.Data", "annoucement", "", "");
+        tipsAnnoucement = config.Bind("RavenM.ZDebug.Data", "annoucement", "Remember to check updates on our site often!\n---\nThank all testers in discord server for debugging!", "");
 
         config.SettingChanged += (sender, arg) => { Task.Run(OnSettingUpdate); };
     }
