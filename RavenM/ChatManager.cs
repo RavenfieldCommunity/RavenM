@@ -201,13 +201,10 @@ namespace RavenM
             string clientTeam = LobbySystem.instance.GetLobbyMemberData(SteamId, "team");
             bool isUserRealEnemyTeam = userId == HASH_USER_NULL ? false : team != clientTeam & team != LobbySystem.HASH_LOBBYDATA_TEAM_I;
 
-            if (isUserRealEnemyTeam)
+            if (isUserRealEnemyTeam && teamOnly)
                 return;
-            if (teamOnly)
-            {
-                if (team == clientTeam) colorString = "green";
-                else if (isUserRealEnemyTeam) colorString = "red";
-            }
+            if (team == clientTeam) colorString = "green";
+            else if (isUserRealEnemyTeam) colorString = "red";
 
             string nameHeadProcessed = $"{(userId == HASH_USER_NULL ? "" : System.Text.RegularExpressions.Regex.Unescape(SteamFriends.GetFriendPersonaName(new CSteamID(userId))))}{(teamOnly  ? "|team" : "")}";
 
@@ -443,7 +440,7 @@ namespace RavenM
                         }
                         else
                         {
-                            AppendToChatLink(SteamId.m_SteamID, CurrentChatMessage);
+                            AppendToChatLink(SteamId.m_SteamID, CurrentChatMessage, teamOnly:!ChatMode);
                             SendLobbyChat($"{(ChatMode ? "" : HASH_CHAT_TEAM)}{CurrentChatMessage}");
                             /*
                             // Send message to users in lobby if not team chat
