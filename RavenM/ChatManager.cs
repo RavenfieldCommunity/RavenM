@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
+using BepInEx.Configuration;
 using HarmonyLib;
 using Steamworks;
 using System.Collections;
@@ -72,8 +72,8 @@ namespace RavenM
         /// </summary>
         public bool ChatMode = false;
         public CommandManager CommandManager;
-        public KeyCode GlobalChatKeybind = KeyCode.Y;
-        public KeyCode TeamChatKeybind = KeyCode.U;
+        public KeyboardShortcut GlobalChatKeybind = new KeyboardShortcut(KeyCode.Y);
+        public KeyboardShortcut TeamChatKeybind = new KeyboardShortcut(KeyCode.U);
 
         /// <summary>
         /// Client's steam id
@@ -475,19 +475,37 @@ namespace RavenM
                     TypeIntention = false;
                 }
             }
-
-            if (Event.current.isKey && Event.current.keyCode == GlobalChatKeybind && !TypeIntention)
+            
+            if (Settings.useClassicKeybindHook.Value)
             {
-                TypeIntention = true;
-                JustFocused = true;
-                ChatMode = true;
+            
+                if (Event.current.isKey && Event.current.keyCode == GlobalChatKeybind.MainKey && !TypeIntention)
+                {
+                    TypeIntention = true;
+                    JustFocused = true;
+                    ChatMode = true;
+                }
+                else if (Event.current.isKey && Event.current.keyCode == TeamChatKeybind.MainKey && !TypeIntention)
+                {
+                    TypeIntention = true;
+                    JustFocused = true;
+                    ChatMode = false;
+                }
             }
-
-            if (Event.current.isKey && Event.current.keyCode == TeamChatKeybind && !TypeIntention)
+            else
             {
-                TypeIntention = true;
-                JustFocused = true;
-                ChatMode = false;
+                if (GlobalChatKeybind.IsDown() && !TypeIntention)
+                {
+                    TypeIntention = true;
+                    JustFocused = true;
+                    ChatMode = true;
+                }
+                else if (TeamChatKeybind.IsDown() && !TypeIntention)
+                {
+                    TypeIntention = true;
+                    JustFocused = true;
+                    ChatMode = false;
+                }
             }
         }
 

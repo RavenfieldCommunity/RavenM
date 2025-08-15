@@ -35,7 +35,7 @@ namespace RavenM
     {
         static bool Prefix()
         {
-            if (LobbySystem.instance.InLobby && !LobbySystem.instance.IsLobbyOwner && !LobbySystem.instance.ReadyToPlay && SteamMatchmaking.GetLobbyData(LobbySystem.instance.ActualLobbyID, "started") != "yes")
+            if (LobbySystem.instance.InLobby && !LobbySystem.instance.IsLobbyOwner && !LobbySystem.instance.ReadyToPlay)
             {
                 LobbySystem.instance.NotificationText = "Please wait for host to start game...";
                 return false;
@@ -305,6 +305,12 @@ namespace RavenM
 
             // Sort mutators
             ModManager.instance.loadedMutators.Sort((x, y) => x.name.CompareTo(y.name));
+            
+            // Map picker reload, can you believe the ravens didnt it after mod reloading???
+            // though it maybe fixed after i raised the issue
+            // and i hate map picker
+            var mapPicker = GameObject.FindObjectOfType<MapPicker>(includeInactive: true);
+            mapPicker.shouldReloadEntries = true;
 
             if (!LobbySystem.instance.InLobby || !LobbySystem.instance.LobbyDataReady || LobbySystem.instance.IsLobbyOwner || LobbySystem.instance.ModsToDownload.Count > 0)
                 return;
@@ -500,6 +506,7 @@ namespace RavenM
         public static string HASH_LOBBYDATA_TEAM_E = "E";
         public static string HASH_LOBBYDATA_TEAM_R = "R";
         public static string HASH_LOBBYDATA_TEAM_I = "I";
+        public static string HASH_LOBBYDATA_TRUE = "true";
 
         private void Awake()
         {
@@ -793,6 +800,7 @@ namespace RavenM
             Plugin.logger.LogInfo($"botAmountRaven: {SteamMatchmaking.GetLobbyData(ActualLobbyID, "botAmountRaven")}");
             Plugin.logger.LogInfo($"gameLength: {SteamMatchmaking.GetLobbyData(ActualLobbyID, "gameLength")}");
             Plugin.logger.LogInfo($"map: {SteamMatchmaking.GetLobbyData(ActualLobbyID, "map")}");
+            Plugin.logger.LogInfo($"started: {SteamMatchmaking.GetLobbyData(ActualLobbyID, "started")}");
             Plugin.logger.LogInfo($"isOfficalMap: {SteamMatchmaking.GetLobbyData(ActualLobbyID, "isOfficalMap")}");
             for (int i = 0; i < 2; i++)
             {
@@ -1068,7 +1076,7 @@ namespace RavenM
                 if (!ModManager.instance.contentHasFinishedLoading)
                     return;
                 
-                bool doubleCheck = false; //fix for entering into the wrong map with midgame joining
+                bool doubleCheck = false; //fix for entering into the wrong map with midgame joining, if is `true` then the check is pass
                 bool isTargetOfficialMap = bool.Parse(SteamMatchmaking.GetLobbyData(ActualLobbyID, "isOfficalMap"));
                 string targetMapName = SteamMatchmaking.GetLobbyData(ActualLobbyID, "map"); 
                 if (mapEntryData.GetName() != targetMapName | isTargetOfficialMap != mapEntryData.IsOfficial())
@@ -1093,6 +1101,8 @@ namespace RavenM
                     }
                     isChangingList = false;
                 }
+                else
+                    doubleCheck = true;
 
 
                 for (int i = 0; i < 2; i++)
@@ -1262,7 +1272,7 @@ namespace RavenM
                 }
                 isListChanged = false;
 
-                if (doubleCheck)
+                if (doubleCheck == false)
                     return;
                 
                 // manually check by player to start game is better I think
@@ -1277,7 +1287,7 @@ namespace RavenM
 
         private void OnGUI()
         {
-            if (GameManager.instance == null || (GameManager.IsIngame() && IngameMenuUi.instance != null && !IngameMenuUi.instance.canvas.enabled))
+            if (GameManager.instance == null || GameManager.IsIngame() && (Settings.showInLobbyMenuAtPauseMenu.Value ? (IngameMenuUi.instance != null && !IngameMenuUi.instance.canvas.enabled) : (LoadoutUi.instance != null && LoadoutUi.HasBeenClosed())) )
                 return;
 
             if (MainMenu.instance != null)
@@ -1287,7 +1297,7 @@ namespace RavenM
                     return;
                 else
                 {
-                    if (GUI.Button(new Rect(7, (Screen.height - 70) * 0.97f, 150, 30f), "Multiplayer") & !InLobby)
+                    if (GUI.Button(new Rect(Screen.width/2-75, Screen.height-25, 150, 30f), "Multiplayer") & !InLobby)
                     {
                         if (GUIStack.Count == 0)
                             GUIStack.Push(GUIStackState.Main);
@@ -1673,8 +1683,8 @@ namespace RavenM
 
                     GUILayout.Label($"BOTS: {SteamMatchmaking.GetLobbyData(LobbyView, "botAmountEagle")} / {SteamMatchmaking.GetLobbyData(LobbyView, "botAmountRaven")}");
 
-                    var map = SteamMatchmaking.GetLobbyData(LobbyView, "customMap");
-                    map = map != string.Empty ? map : "Default";
+                    var map = SteamMatchmaking.GetLobbyData(LobbyView, "map");
+                    map =  SteamMatchmaking.GetLobbyData(LobbyView, "isOfficialMap") == HASH_LOBBYDATA_TRUE ?  "Default" : map ;
                     GUILayout.Label($"MAP: {map}");
 
                     var status = SteamMatchmaking.GetLobbyData(LobbyView, "started") == "yes" ? "<color=green>In-game</color>" : "Configuring";
@@ -1718,7 +1728,7 @@ namespace RavenM
 
                 GUILayout.BeginHorizontal();
                 GUILayout.FlexibleSpace();
-                if (GUILayout.Button(shouldShowInLobbyMoreOptions ? "<" : "..."))
+                if (!shouldHideInLobbyMenu && GUILayout.Button(shouldShowInLobbyMoreOptions ? "<" : "..."))
                     shouldShowInLobbyMoreOptions = !shouldShowInLobbyMoreOptions;
                 if (GUILayout.Button($"{(shouldHideInLobbyMenu ? "HIDDEN - RavenM" : SteamMatchmaking.GetLobbyData(ActualLobbyID, "lobbyname"))}"))
                 {
