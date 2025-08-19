@@ -45,9 +45,14 @@ namespace RavenM
         public string InteralMessageToAppend2;
 
         /// <summary>
-        /// The full chat transcript
+        /// The full chat transcript to show at chat ui
         /// </summary>
         public string FullChatLink = string.Empty;
+        
+        /// <summary>
+        /// The last index of steam lobby chat entry, started from zero
+        /// </summary>
+        public int FullChatLinkLastRealIndex = 0;
         public Vector2 ChatScrollPosition= Vector2.zero;
         private List<string> _chatPositionOptions = new List<string>
         {
@@ -144,6 +149,7 @@ namespace RavenM
             ulong steamId = pCallback.m_ulSteamIDUser;
             var buf = new byte[4096];
             int len = SteamMatchmaking.GetLobbyChatEntry(LobbySystem.instance.ActualLobbyID, (int)pCallback.m_iChatID, out CSteamID user, buf, buf.Length, out EChatEntryType chatType);
+            FullChatLinkLastRealIndex = (int)pCallback.m_iChatID;
             string chat = DecodeLobbyChat(buf, len);
 
             if (steamId != SteamId.m_SteamID)
@@ -160,7 +166,6 @@ namespace RavenM
                         AppendToChatLink(steamId, chat);
                 }
             }
-
         }
 
         /// <summary>
@@ -203,10 +208,12 @@ namespace RavenM
 
             if (isUserRealEnemyTeam && teamOnly)
                 return;
-            if (team == clientTeam) colorString = "green";
-            else if (isUserRealEnemyTeam) colorString = "red";
+            
+            var nameHeadColorString = "white";
+            if (team == clientTeam && userId != SteamId.m_SteamID) nameHeadColorString = "green";
+            else if (isUserRealEnemyTeam) nameHeadColorString = "red";
 
-            string nameHeadProcessed = $"{(userId == HASH_USER_NULL ? "" : System.Text.RegularExpressions.Regex.Unescape(SteamFriends.GetFriendPersonaName(new CSteamID(userId))))}{(teamOnly  ? "|team" : "")}";
+            string nameHeadProcessed = userId == HASH_USER_NULL ? "" : $"<color={nameHeadColorString}>" + SteamFriends.GetFriendPersonaName(new CSteamID(userId)).Replace("\n", "") + (teamOnly ? "|team" : "") + "</color>";
 
             FinalAppendToChatLink(nameHeadProcessed, message, colorString);
         }
@@ -218,7 +225,7 @@ namespace RavenM
 
         private void FinalAppendToChatLink(string nameHeadProcessed, string message, string colorString = "white")
         {
-            LastChatMessage = $"{(nameHeadProcessed == "" ? "" : $"<color={colorString}><b><{nameHeadProcessed}></b></color> ")}{System.Text.RegularExpressions.Regex.Unescape(message)}\n";
+            LastChatMessage = (nameHeadProcessed == "" ? "" : $"<b>{nameHeadProcessed}]</b> ") + $"<color={colorString}>" + message.Replace("\n", "") + "</color>\n";
             FullChatLink += LastChatMessage;
 
             ChatScrollPosition.y = Mathf.Infinity;
@@ -323,7 +330,7 @@ namespace RavenM
             string[] commands = CommandManager.SplitSingleArgument(messageTrimed);
             if (commands.Length < 1)
             {
-                AppendToChatLink($"Syntax error", HASH_COLOR_RED);
+                AppendToChatLink(ChatManager.HASH_USER_NULL, $"Syntax error", HASH_COLOR_RED);
                 return;
             }
             
@@ -331,20 +338,20 @@ namespace RavenM
             Command cmd = CommandManager.GetCommandFromName(targetCommandName);
             if (!CommandManager.ContainsCommand(targetCommandName))
             {
-                AppendToChatLink($"Unknown command `{targetCommandName}`", HASH_COLOR_RED);
+                AppendToChatLink(ChatManager.HASH_USER_NULL, $"Unknown command `{targetCommandName}`", HASH_COLOR_RED);
                 return;
             }
 
             if (!(cmd.AllowInLobby && !GameManager.IsIngame()) && !(cmd.AllowInGame && GameManager.IsIngame()))
             {
-                AppendToChatLink(cmd.AllowInGame ? $"Command `{targetCommandName}` is disabled when not in gaming" : $"Command `{targetCommandName}` is disabled in gaming", HASH_COLOR_RED);
+                AppendToChatLink(ChatManager.HASH_USER_NULL, cmd.AllowInGame ? $"Command `{targetCommandName}` is disabled when not in gaming" : $"Command `{targetCommandName}` is disabled in gaming", HASH_COLOR_RED);
                 return;
             }
 
             bool hasCommandPermission = CommandManager.HasPermission(cmd, id, local);
             if (!CommandManager.HasPermission(cmd, id, local))
             {
-                AppendToChatLink($"Access denied with command `{targetCommandName}`", HASH_COLOR_RED);
+                AppendToChatLink(ChatManager.HASH_USER_NULL, $"Access denied with command `{targetCommandName}`", HASH_COLOR_RED);
                 return;
             }
 
@@ -360,7 +367,7 @@ namespace RavenM
             {
                 Plugin.logger.LogError(e.ToString());
                 if (local) // if the command isnt from local, then no need to push message to chat field
-                    AppendToChatLink(cmd.SyntaxMessage, HASH_COLOR_RED);
+                    AppendToChatLink(ChatManager.HASH_USER_NULL, cmd.SyntaxMessage, HASH_COLOR_RED);
             }
 
             if (cmd.Global == true && local == true && !cmd.needSendManually)
@@ -374,7 +381,8 @@ namespace RavenM
         public void SendLobbyChat(string message)
         {
             var bytes = Encoding.UTF8.GetBytes(message);
-            SteamMatchmaking.SendLobbyChatMsg(LobbySystem.instance.ActualLobbyID, bytes, bytes.Length);
+            if (!SteamMatchmaking.SendLobbyChatMsg(LobbySystem.instance.ActualLobbyID, bytes, bytes.Length))
+                AppendToChatLink(ChatManager.HASH_USER_NULL, "Send message failed", HASH_COLOR_RED);
         }
 
         /// <summary>

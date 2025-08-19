@@ -63,6 +63,10 @@ namespace RavenM
 
         public static int currentGameBuildNumber = 0;
         public static Dictionary<string, string> Arguments = new Dictionary<string, string>();
+        
+        public static string storageDirectoryPath = Application.persistentDataPath + "/RavenM/";
+        
+        public bool hasDetectedException = false;
 
         public static string BuildGUID
         {
@@ -95,7 +99,13 @@ namespace RavenM
             instance = this;
             logger = Logger;
             config = Config;
-
+            
+            // global error handle, if has error then save log to another path when quitting game so the log wnot lose
+            Application.logMessageReceived += (string logString, string stackTrace, LogType type) => {
+                if ((type == LogType.Error || type == LogType.Exception) && hasDetectedException == false)
+                    hasDetectedException = true;
+            };
+            
             Settings.Init();
 
             string[] args = Environment.GetCommandLineArgs();
@@ -169,6 +179,7 @@ namespace RavenM
             }
             InitLoadMessage();
             
+            // get tips annoucement
             Task.Run(() =>
             {
                 try
@@ -255,6 +266,18 @@ namespace RavenM
         void OnDestory()
         {
             instance = null;
+        }
+        
+        void OnApplicationQuit()
+        {
+            // TO DO: this is not completed yet, should we help player copy log without asking??
+            /*
+            if (hasDetectedException && Application.consoleLogPath != "")
+            {
+                var writer = File.CreateText(storageDirectoryPath + "ERROR_LOG_FILES_ARE_IN_THE_PARENT_FOLDER");
+                writer.Write("They are named e.g. `Player_2025-03-02-15-47.log.txt`\nPAY ATTENTION TO THE DATE IN THE FILE NAMES!!!\nBETTER NOT TO USE `Playe.log` or `Playe-prev.log`!!!");
+                writer.Close();
+            */
         }
 
         void JoinLobbyFromArgument()

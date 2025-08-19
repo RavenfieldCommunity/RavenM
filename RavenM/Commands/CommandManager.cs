@@ -17,6 +17,7 @@ namespace RavenM.Commands
         {
             Commands = new List<Command>();
             // dont push pure text message to remote chat, only after processing
+            // dont push pure text message as output of command, please process command and output by each client itself
             Commands.Add(new Command(
                 _name: "help",
                 _global: false,
@@ -269,16 +270,15 @@ namespace RavenM.Commands
             );
             Commands.Add(new Command(
                 _name: "tp",
-                _global: false,
+                _global: true,
                 _reqArgs: null,
                 _hostOnly: true,
                 scripted: true,
                 allowInLobby: false,
                 allowInGame: true,
-                helpMessage: "transfer actor A to actor B's position. Remember to turn ` ` into `_`!",
+                helpMessage: "transfer actor A to actor B's position. Remember to turn ` ` into `_`!.",
                 syntaxMessage: "/tp (<selector>|<nameA>|<steam idA>) (@s|<nameB>|<steam idB>)")
             {
-                needSendManually = true,
                 Action = (string originalStringTrimed, bool isLocal) =>
                 {
                     Actor targetB;
@@ -290,7 +290,7 @@ namespace RavenM.Commands
                     }
                     else
                     {
-                        if (targetBString == "@s") targetB = FpsActorController.instance.actor;
+                        if (targetBString == "@s") targetB = isLocal ? FpsActorController.instance.actor : GetActor(LobbySystem.instance.OwnerID.m_SteamID);
                         else targetB = GetActor(targetBString);
                     }
                     if (targetB == null)
@@ -327,10 +327,62 @@ namespace RavenM.Commands
                     ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, $"Move {targetsAString} to {targetBString}");
                     foreach (var singleA in targetsA)
                     {
-                        if (singleA != null && !(singleA.controller as NetActorController) & !singleA.dead && !singleA.IsSeated())
-                            singleA.controller.Move(targetB.transform.position - singleA.transform.position);
+                        bool isCurrentIsPlayerSelf = singleA == FpsActorController.instance.actor;
+                        if (isCurrentIsPlayerSelf && isLocal) 
+                            continue;
+                        if (singleA != null && !(singleA.controller as NetActorController) && !singleA.dead && !singleA.IsSeated())
+                        {
+                            // good jod, `MoveActor()` doesnt work
+                            singleA.SetPositionAndRotation(targetB.transform.position, singleA.transform.rotation);
+                            if (isCurrentIsPlayerSelf && !isLocal) 
+                                return;
+                        }
                     }
 
+                }
+            }
+            );
+            Commands.Add(new Command(
+                _name: "forceback",
+                _global: false,
+                _reqArgs: null,
+                _hostOnly: false,
+                scripted: true,
+                allowInLobby: true,
+                allowInGame: true,
+                helpMessage: "Force leave lobby and back to game menu from in-game map, if you are sticking at someplace",
+                syntaxMessage: "/forceback")
+            {
+                Action = (string originalStringTrimed, bool isLocal) =>
+                {
+                    if (isLocal){
+                        ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, "Force back to game menu");
+                        SteamMatchmaking.LeaveLobby(LobbySystem.instance.ActualLobbyID);
+                        if (IngameMenuUi.instance != null)
+                            IngameMenuUi.instance.Menu();
+                        else
+                            GameManager.ReturnToMenu();
+                    }
+                }
+            }
+            );
+            Commands.Add(new Command(
+                _name: "clear",
+                _global: false,
+                _reqArgs: null,
+                _hostOnly: false,
+                scripted: true,
+                allowInLobby: true,
+                allowInGame: true,
+                helpMessage: "Clean all message history shown on chat field, not including server storage at current lobby",
+                syntaxMessage: "/clear")
+            {
+                Action = (string originalStringTrimed, bool isLocal) =>
+                {
+                    if (isLocal){
+                        ChatManager.instance.ResetChat();
+                        ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, "Cleaned message");
+                    }
                 }
             }
             );
@@ -502,11 +554,18 @@ namespace RavenM.Commands
         public Actor GetActor(ulong steamId)
         {
             var memberId = new CSteamID(steamId);
-            foreach (Actor actor in IngameNetManager.instance.GetPlayers())
+            if (IngameNetManager.instance.SteamIDsOfPlayers.ContainsKey(memberId))
             {
-                if (actor.name.ToLower().Replace(" ", "_") == SteamFriends.GetFriendPersonaName(memberId).ToLower().Replace(" ", "_"))
+                return IngameNetManager.instance.ClientActors[IngameNetManager.instance.SteamIDsOfPlayers[memberId]];
+            }
+            else
+            {
+                foreach (Actor actor in IngameNetManager.instance.GetPlayers())
                 {
-                    return actor;
+                    if (actor.name.ToLower().Replace(" ", "_") == SteamFriends.GetFriendPersonaName(memberId).ToLower().Replace(" ", "_"))
+                    {
+                        return actor;
+                    }
                 }
             }
             return null;

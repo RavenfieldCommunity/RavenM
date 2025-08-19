@@ -453,7 +453,7 @@ namespace RavenM
         static bool OnGUI()
         {
             if (LobbySystem.instance.InLobby)
-                return LobbySystem.instance.EnablWallhack;
+                return LobbySystem.instance.EnableWallhack;
             else
                 return true;
         }
@@ -517,7 +517,7 @@ namespace RavenM
         public HashSet<int> OwnedActors = new HashSet<int>();
 
         public Dictionary<int, Actor> ClientActors = new Dictionary<int, Actor>();
-        public Dictionary<int, CSteamID> SteamIDsOfPlayers = new Dictionary<int, CSteamID>();
+        public Dictionary<CSteamID, int> SteamIDsOfPlayers = new Dictionary<CSteamID, int>();
 
         public HashSet<int> OwnedVehicles = new HashSet<int>();
 
@@ -583,7 +583,7 @@ namespace RavenM
         /// How many marker we are drawing? Updated every `OnGUI()`
         /// </summary>
         public int markerCount = 0;
-        public int voiceCount = 0;
+        public int voiceCount = 0;  // FIXME: not works yet
 
         public Type Steamworks_NativeMethods;
 
@@ -1294,7 +1294,8 @@ namespace RavenM
                                             continue;
 
                                         Actor actor;
-
+                                        
+                                        // i wonder why sometimes seems to have decuplicated actor adding?
                                         if (ClientActors.ContainsKey(actor_packet.Id))
                                         {
                                             actor = ClientActors[actor_packet.Id];
@@ -1444,7 +1445,7 @@ namespace RavenM
                                             }
 
                                             ClientActors[actor_packet.Id] = actor;
-                                            SteamIDsOfPlayers.Add(actor_packet.Id, msg.m_identityPeer.GetSteamID());
+                                            SteamIDsOfPlayers[msg.m_identityPeer.GetSteamID()] =  actor_packet.Id;
                                             RSPatch.RavenscriptEventsManagerPatch.events.onPlayerJoin.Invoke(actor);
                                         }
 
@@ -2201,7 +2202,6 @@ namespace RavenM
                                         break;
 
                                     state.VoiceQueue.Add(decodedData);
-                                    voiceCount++;
                                 }
                                 break;
                             case PacketType.VehicleDamage:
