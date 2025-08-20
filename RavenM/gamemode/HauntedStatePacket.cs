@@ -76,15 +76,6 @@ namespace RavenM
 
             return false;
         }
-        
-        static void Postfix(SpookOpsMode __instance, Actor actor)
-        {
-            if (actor.team == 1 && !actor.aiControlled)
-            {
-                var spookOpsMode = Traverse.Create(__instance);
-                spookOpsMode.Field("gameWon").SetValue(true);
-            }
-        }
 
         public static void CheckLoseCondition()
         {
@@ -95,8 +86,7 @@ namespace RavenM
             {
                 foreach (var actor in IngameNetManager.instance.ClientActors.Values)
                 {
-                    // FIXME: yeah...
-                    if ((!actor.aiControlled && !actor.dead) ||
+                    if (actor.team == 0 && (!actor.aiControlled && !actor.dead) ||
                         (actor.controller is NetActorController &&
                             ((actor.controller as NetActorController).Flags & (int)ActorStateFlags.AiControlled) == 0 &&
                             ((actor.controller as NetActorController).Flags & (int)ActorStateFlags.Dead) == 0))
@@ -124,7 +114,6 @@ namespace RavenM
 
         static bool Prefix()
         {
-            Plugin.logger.LogDebug("StartPhase");
             if (!LobbySystem.instance.InLobby || IngameNetManager.instance.IsHost || CanPerform)
                 return true;
                 
@@ -155,18 +144,20 @@ namespace RavenM
     {
         static void Postfix(SpookOpsMode __instance)
         {
-            if (!LobbySystem.instance.InLobby || !IngameNetManager.instance.IsHost || !HauntedActorDiedPatch.anyPlayerAlive || (FpsActorController.instance.actor != null && !FpsActorController.instance.actor.dead))
+            if (!LobbySystem.instance.InLobby || !IngameNetManager.instance.IsHost || (IngameNetManager.instance.IsHost && FpsActorController.instance != null && !FpsActorController.instance.actor.dead))
                 return;
+                
             // this patch is only for host
-            // the next phase need to be invoked by host side before
+            // when a player come to the spawnpoint, the next phase need to be invoked by host side before
             var spookOpsMode = Traverse.Create(__instance);
             foreach (var kv in IngameNetManager.instance.ClientActors)
             {
                 var actor = kv.Value;
-                bool flag = !actor.aiControlled && (spookOpsMode.Field("currentSpawnPoint").GetValue<SpawnPoint>().transform.position - actor.Position()).magnitude < 35f; // condition from original game
-                if (spookOpsMode.Field("awaitingNextPhase").GetValue<bool>() && flag)
+                bool canStartPhase = actor.controller as NetActorController && (spookOpsMode.Field("currentSpawnPoint").GetValue<SpawnPoint>().transform.position - actor.Position()).magnitude < 35f; // condition from original game
+                bool awaitingNextPhase = spookOpsMode.Field("awaitingNextPhase").GetValue<bool>();
+                if (awaitingNextPhase && canStartPhase)
 			          {
-				            spookOpsMode.Method("StartPhase").GetValue             ();
+				            spookOpsMode.Method("StartPhase").GetValue();
 			          }
             }
         }
