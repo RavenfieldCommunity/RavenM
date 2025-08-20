@@ -68,13 +68,13 @@ namespace RavenM.UI
             if (onlyForTeam)
                 focusRange = focusRange * 2;
             SetCustomColor();
-            OptionsPatch.onSettingUpdate += ToggleNameTags;
+            //OptionsPatch.onSettingUpdate += ToggleNameTags;
             StartCoroutine(LoadAssetBundle(Assembly.GetExecutingAssembly().GetManifestResourceStream("RavenM.assets.UIBundle")));
         }
 
         void OnDestroy()
         {
-            OptionsPatch.onSettingUpdate -= ToggleNameTags;
+            //OptionsPatch.onSettingUpdate -= ToggleNameTags;
         }
 
         void InitNameTags()
@@ -126,8 +126,8 @@ namespace RavenM.UI
             //LobbySystem.instance.nameTagsForTeamOnly;
             bool settingsNameTagEnabled = LobbySystem.instance.nameTagsEnabled;
             SetCustomColor();
-            nameTagsEnabled = (OptionsPatch.showHUD && settingsNameTagEnabled);
-            nameTagfontSize = Mathf.RoundToInt(OptionsPatch.GetOptionWithName<float>(OptionsPatch.RavenMOptions.NameTagScaleMultiplier, OptionsPatch.OptionTypes.Slider));
+            nameTagsEnabled = (Settings.showIngameUI.Value && settingsNameTagEnabled);
+            nameTagfontSize = Settings.nameTagFontSize.Value;
             foreach (var nameTag in nameTagObjects.Keys)
             {
                 nameTag.parentTransform.gameObject.SetActive(nameTagsEnabled);
@@ -154,7 +154,7 @@ namespace RavenM.UI
         public void CreateNameTagInstance(Actor actor,RectTransform canvasTransform)
         {
             bool settingsNameTagEnabled = LobbySystem.instance.nameTagsEnabled;
-            nameTagsEnabled = (OptionsPatch.showHUD && settingsNameTagEnabled);
+            nameTagsEnabled = (Settings.showIngameUI.Value && settingsNameTagEnabled);
             if (!nameTagsEnabled)
             {
                 return;
@@ -185,11 +185,11 @@ namespace RavenM.UI
         }
         private void SetCustomColor()
         {
-            customColor = OptionsPatch.GetOptionWithName<bool>(OptionsPatch.RavenMOptions.CustomNameTagColor, OptionsPatch.OptionTypes.Toggle);
+            customColor = Settings.enableNameTagCustomColor.Value;
             if (customColor)
             {
-                string customColorEnemyHex = OptionsPatch.GetOptionWithName<string>(OptionsPatch.OptionText.NameTagEnemyColor).Value;
-                string customColorTeamHex = OptionsPatch.GetOptionWithName<string>(OptionsPatch.OptionText.NameTagTeamColor).Value;
+                string customColorEnemyHex = Settings.nameTagColorEnemy.Value;
+                string customColorTeamHex = Settings.nameTagColorTeam.Value;
                 if (ColorUtility.TryParseHtmlString(customColorEnemyHex, out Color redColor))
                 {
                     customColorEnemy = redColor;

@@ -20,7 +20,7 @@ namespace RavenM
                 return false;
             if (ready)
             {
-                ChatManager.instance.PushCommandChatMessage("Starting Scripted Mission!", UnityEngine.Color.white, false, true);
+                ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, "Starting Scripted Mission!");
                 foreach (TriggerOnStart triggerOnStart in triggerOnStart)
                 {
                     if (triggerOnStart != null)

@@ -689,8 +689,7 @@ namespace RavenM
                 VehicleId = ReadInt32(),
                 Seat = ReadInt32(),
                 MovingPlatformVehicleId = ReadInt32(),
-                TargetDetectionProgress = ReadSingle(),
-                ParachuteDeployed = ReadBoolean()
+                TargetDetectionProgress = ReadSingle()
             };
         }
 

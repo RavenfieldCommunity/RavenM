@@ -45,6 +45,7 @@ namespace RavenM
     {
         static bool Prefix()
         {
+            Plugin.logger.LogDebug("PrepareNextPhase");
             if (!LobbySystem.instance.InLobby || IngameNetManager.instance.IsHost)
                 return true;
 
@@ -60,7 +61,9 @@ namespace RavenM
     [HarmonyPatch(typeof(SpookOpsMode), nameof(SpookOpsMode.ActorDied))]
     public class HauntedActorDiedPatch
     {
-        static bool Prefix()
+        public static bool anyPlayerAlive = false;
+    
+        static bool Prefix(Actor actor)
         {
             if (!LobbySystem.instance.InLobby)
                 return true;
@@ -68,7 +71,7 @@ namespace RavenM
             if (FpsActorController.instance.actor.dead)
                 typeof(FpsActorController).GetMethod("TogglePhotoMode", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(FpsActorController.instance, null);
 
-            if (IngameNetManager.instance.IsHost)
+            if (actor.team == 1)
                 return true;
 
             return false;
@@ -81,11 +84,9 @@ namespace RavenM
 
             if (((TimedAction)typeof(SpookOpsMode).GetField("introAction", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(GameModeBase.activeGameMode)).TrueDone())
             {
-                bool anyPlayerAlive = false;
                 foreach (var actor in IngameNetManager.instance.ClientActors.Values)
                 {
-                    // FIXME: yeah...
-                    if ((!actor.aiControlled && !actor.dead) ||
+                    if (actor.team == 0 && (!actor.aiControlled && !actor.dead) ||
                         (actor.controller is NetActorController &&
                             ((actor.controller as NetActorController).Flags & (int)ActorStateFlags.AiControlled) == 0 &&
                             ((actor.controller as NetActorController).Flags & (int)ActorStateFlags.Dead) == 0))
@@ -98,6 +99,7 @@ namespace RavenM
                 if (!anyPlayerAlive)
                 {
                     HauntedEndPatch.CanPerform = true;
+                    Plugin.logger.LogDebug("No one alive");
                     typeof(SpookOpsMode).GetMethod("EndGame", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(GameModeBase.activeGameMode, null);
                     HauntedEndPatch.CanPerform = false;
                 }
@@ -114,7 +116,7 @@ namespace RavenM
         {
             if (!LobbySystem.instance.InLobby || IngameNetManager.instance.IsHost || CanPerform)
                 return true;
-
+                
             return false;
         }
     }
@@ -127,9 +129,37 @@ namespace RavenM
         static bool Prefix(SpookOpsMode __instance)
         {
             if (!LobbySystem.instance.InLobby || CanPerform || (bool)typeof(SpookOpsMode).GetField("gameWon", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(__instance))
+            {
+                Plugin.logger.LogDebug("EndGame");
                 return true;
+            }
+                
 
             return false;
+        }
+    }
+    
+    [HarmonyPatch(typeof(SpookOpsMode), "Update")]
+    public class HauntedUpdatePatch
+    {
+        static void Postfix(SpookOpsMode __instance)
+        {
+            if (!LobbySystem.instance.InLobby || !IngameNetManager.instance.IsHost || (IngameNetManager.instance.IsHost && FpsActorController.instance != null && !FpsActorController.instance.actor.dead))
+                return;
+                
+            // this patch is only for host
+            // when a player come to the spawnpoint, the next phase need to be invoked by host side before
+            var spookOpsMode = Traverse.Create(__instance);
+            foreach (var kv in IngameNetManager.instance.ClientActors)
+            {
+                var actor = kv.Value;
+                bool canStartPhase = actor.controller as NetActorController && (spookOpsMode.Field("currentSpawnPoint").GetValue<SpawnPoint>().transform.position - actor.Position()).magnitude < 35f; // condition from original game
+                bool awaitingNextPhase = spookOpsMode.Field("awaitingNextPhase").GetValue<bool>();
+                if (awaitingNextPhase && canStartPhase)
+			          {
+				            spookOpsMode.Method("StartPhase").GetValue();
+			          }
+            }
         }
     }
 

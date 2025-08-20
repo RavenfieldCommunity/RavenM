@@ -7,6 +7,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
+using System.IO;
+using System.Net;
+using System.Threading.Tasks;
+using SimpleJSON;
 namespace RavenM
 {
     /// <summary>
@@ -59,6 +63,10 @@ namespace RavenM
 
         public static int currentGameBuildNumber = 0;
         public static Dictionary<string, string> Arguments = new Dictionary<string, string>();
+        
+        public static string storageDirectoryPath = Application.persistentDataPath + "/RavenM/";
+        
+        public bool hasDetectedException = false;
 
         public static string BuildGUID
         {
@@ -66,26 +74,18 @@ namespace RavenM
             {
                 if (!changeGUID)
                 {
-                    return $"INDEV-EA{(currentGameBuildNumber == 0 ? 0 : currentGameBuildNumber)}-{MyPluginInfo.PLUGIN_VERSION.Replace(".", "-")}-{Assembly.GetExecutingAssembly().ManifestModule.ModuleVersionId.ToString().Split('-').Last()}";
+                    return $"INDEV-EA{(GameManager.instance == null ? 0 : GameManager.instance.buildNumber)}-{MyPluginInfo.PLUGIN_VERSION.Replace(".", "-")}-{Assembly.GetExecutingAssembly().ManifestModule.ModuleVersionId.ToString().Split('-').Last()}";
                 }
                 else
                 {
-                    return $"TESTMODE-EA{(currentGameBuildNumber == 0 ? 0 : currentGameBuildNumber)}-{MyPluginInfo.PLUGIN_VERSION.Replace(".", "-")}-89a27d9e2fcb";
+                    return $"TESTMODE-EA{(GameManager.instance == null ? 0 : GameManager.instance.buildNumber)}-{MyPluginInfo.PLUGIN_VERSION.Replace(".", "-")}-89a27d9e2fcb";
                 }
             }
         }
 
-        public static readonly int EXPECTED_BUILD_NUMBER = 31;
+        public static readonly int EXPECTED_BUILD_NUMBER = 32;
 
         private ConfigEntry<bool> configRavenMDevMod;
-        public static float chatWidth = 500f;
-        public static float chatHeight = 200f;
-        public static float chatYOffset = 370f;
-        public static float chatXOffset = 10f;
-        public static int chatFontSize = 0;
-        public static bool allowVersionDiff = false;
-        public static bool changeChatFontSize = false;  //If need to change the font size
-
         private ConfigEntry<bool> configRavenMAddToBuiltInMutators;
         private ConfigEntry<string> configRavenMBuiltInMutatorsDirectory;
 
@@ -99,6 +99,14 @@ namespace RavenM
             instance = this;
             logger = Logger;
             config = Config;
+            
+            // global error handle, if has error then save log to another path when quitting game so the log wnot lose
+            Application.logMessageReceived += (string logString, string stackTrace, LogType type) => {
+                if ((type == LogType.Error || type == LogType.Exception) && hasDetectedException == false)
+                    hasDetectedException = true;
+            };
+            
+            Settings.Init();
 
 
             string[] args = Environment.GetCommandLineArgs();
@@ -108,9 +116,9 @@ namespace RavenM
                 if (args[i] == "-noravenm")
                 {
                     Logger.LogWarning($"Plugin {MyPluginInfo.PLUGIN_GUID} is canceled to load!");
-                    InitMessageGUI.stringToShow = "RavenM unloaded";
                     InitLoadMessage();
-                    throw new Exception("Cancel load");
+                    InitMessageGUI.overwrittenStringToShow = "RavenM unloaded.";
+                    Destroy(this);
                 }
             }
 
@@ -130,32 +138,7 @@ namespace RavenM
                                                                 "",
                                                                 "The mutators in the folder will be added automatically as Build In Mutators, this is for testing mutators without having to start the game with mods.");
 
-            chatWidth = Config.Bind("General.ChatField",
-                "Chat Width",
-                500f,
-                "Chat field width.").Value;
-            chatHeight = Config.Bind("General.ChatField",
-                "Chat Height",
-                200f,
-                "Chat field height.").Value;
-            chatYOffset = Config.Bind("General.ChatField",
-                "Chat YOffset",
-                370f,
-                "Chat field y-axis position.").Value;
-            chatXOffset = Config.Bind("General.ChatField",
-                "Chat XOffset",
-                10f,
-                "Chat field x-axis position.").Value;
-            chatFontSize = Config.Bind("General.ChatField",
-                "Chat Font Size",
-                0,
-                "Change the font size of chat field(0 is disable).").Value;
-            allowVersionDiff = Config.Bind("General.Toggles",
-                "Allow clients with different plugin version",
-                false,
-                "Allow host and players use plugins with different version.").Value;
-            if (chatFontSize != 0)
-                changeChatFontSize = true;
+
             changeGUID = configRavenMDevMod.Value;
             addToBuiltInMutators = configRavenMAddToBuiltInMutators.Value;
             customBuildInMutators = configRavenMBuiltInMutatorsDirectory.Value;
@@ -165,7 +148,7 @@ namespace RavenM
             }
             else
             {
-                if (customBuildInMutators != "NOT_REAL" && customBuildInMutators != "")
+                if (customBuildInMutators != "")
                 {
                     Logger.LogError($"Directory {customBuildInMutators} could not be found.");
                 }
@@ -196,6 +179,54 @@ namespace RavenM
                 }
             }
             InitLoadMessage();
+            
+            // get tips annoucement
+            Task.Run(() =>
+            {
+                try
+                {
+                    var result = DateTime.TryParse(Settings.lastGetTipsAnnoucementDate.Value, out var lastTime);
+                    if (Settings.showTipsAnnouncement.Value && result != false && DateTime.Now - lastTime < TimeSpan.FromDays(7))
+                    {
+                        Logger.LogInfo("Skip fetch tips annoucement");
+                        return;
+                    }
+                    JSONNode GetJson(string url)
+                    {
+                        return JSON.Parse(new StreamReader(MakeRequest(url)).ReadToEnd());
+                    }
+                    JSONNode json = null;
+                    try { json = GetJson("https://api.github.com/repos/RavenfieldCommunity/RavenM/releases/237069307"); }
+                    catch(Exception e)
+                    {
+                        Logger.LogError(e);
+                    }
+                    if (json != null && json["tag_name"] == "tips") Settings.tipsAnnoucement.Value = json["body"];
+                    else
+                    {
+                        try { json = GetJson("https://api.github.com/repos/RavenfieldCommunity/RavenM/releases/237069307"); }
+                        catch (Exception e)
+                        {
+                            Logger.LogError(e);
+                        }
+                        var count = 0;
+                        while (json != null && json[count] != null && count < 30)
+                        {
+                            if (json[count]["tag_name"] == "tips")
+                            {
+                                Settings.tipsAnnoucement.Value = json[count]["body"];
+                                break;
+                            }
+                            count++;
+                        }
+                    }
+                    Settings.lastGetTipsAnnoucementDate.Value = DateTime.Now.ToString();
+                }
+                catch (Exception e)
+                {
+                    Logger.LogError(e);
+                }
+            });
         }
 
         public void printConsole(string message)
@@ -227,20 +258,27 @@ namespace RavenM
                 var discordObject = new GameObject();
                 discordObject.AddComponent<DiscordIntegration>();
                 DontDestroyOnLoad(discordObject);
+                // Repush settings 
+                Settings.OnSettingUpdate();
             }
-            else if (!HasGotGameBuildNumber)
-                if (GameManager.instance != null)
-                    currentGameBuildNumber = GameManager.instance.buildNumber;
-                else if (!JoinedLobbyFromArgument && Arguments.ContainsKey("-ravenm-lobby"))
-                {
-                    JoinLobbyFromArgument();
-                }
-                this.enabled = false;
+            this.enabled = false;
         }
 
         void OnDestory()
         {
             instance = null;
+        }
+        
+        void OnApplicationQuit()
+        {
+            // TO DO: this is not completed yet, should we help player copy log without asking??
+            /*
+            if (hasDetectedException && Application.consoleLogPath != "")
+            {
+                var writer = File.CreateText(storageDirectoryPath + "ERROR_LOG_FILES_ARE_IN_THE_PARENT_FOLDER");
+                writer.Write("They are named e.g. `Player_2025-03-02-15-47.log.txt`\nPAY ATTENTION TO THE DATE IN THE FILE NAMES!!!\nBETTER NOT TO USE `Playe.log` or `Playe-prev.log`!!!");
+                writer.Close();
+            */
         }
 
         void JoinLobbyFromArgument()
@@ -251,6 +289,42 @@ namespace RavenM
             LobbySystem.instance.InLobby = true;
             LobbySystem.instance.IsLobbyOwner = false;
             LobbySystem.instance.LobbyDataReady = false;
+        }
+        
+        private Stream MakeRequest(string url)
+        {
+            var req = (HttpWebRequest)WebRequest.Create(url);
+            req.Method = "GET";
+            req.Accept = "application/vnd.github+json";
+            req.UserAgent = "Def-Not-RavenM";
+            req.Timeout = 5000;
+
+            return req.GetResponse().GetResponseStream();
+        }
+    }
+
+    public class InitMessageGUI : MonoBehaviour
+    {
+        public float maxlifetime;
+        public static string overwrittenStringToShow = null;
+        public void Awake()
+        {
+            maxlifetime = Time.time + 30;
+        }
+
+        public void OnGUI()
+        {
+            if (maxlifetime < Time.time) Destroy(this);
+            var rect = new Rect(10, Screen.height - 20, Screen.width, 40);
+            if (overwrittenStringToShow == null)
+            {
+                if (GameManager.instance == null || GameManager.instance.buildNumber == Plugin.EXPECTED_BUILD_NUMBER)
+                    GUI.Label(rect, "RavenM loaded, press `M` to show UI on Instant Actions Menu.");
+                else
+                    GUI.Label(rect, $"RavenM may not work on EA{GameManager.instance.buildNumber}, require EA{Plugin.EXPECTED_BUILD_NUMBER}. press `M` to show UI on Instant Actions Menu.");
+            }
+            else
+                GUI.Label(rect, $"{overwrittenStringToShow}");
         }
     }
 

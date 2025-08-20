@@ -31,15 +31,21 @@ namespace RavenM.RSPatch.Wrapper
         {
             return IngameNetManager.instance.GetPlayers();
         }
+
+        /// <summary>
+        /// Oh local only now
+        /// </summary>
+        /// <param name="message"></param>
+        /// <param name="color"></param>
         public static void SendServerChatMessage(string message, Color color)
         {
             if (!IngameNetManager.instance.IsHost || !LobbySystem.instance.IsLobbyOwner)
             {
                 return;
             }
-            string input = $"<b>Server</b> <color=#{ColorUtility.ToHtmlStringRGB(color)}>{message}</color>";
-            ChatManager.instance.PushChatMessage(null, input, true, -1);
-            
+            string input = $"<color=#{ColorUtility.ToHtmlStringRGB(color)}>{message}</color>";
+            ChatManager.instance.SendLobbyChat($"mod:{message}");
+
             using MemoryStream memoryStream = new MemoryStream();
             var chatPacket = new ChatPacket
             {
@@ -55,6 +61,7 @@ namespace RavenM.RSPatch.Wrapper
             byte[] data = memoryStream.ToArray();
 
             IngameNetManager.instance.SendPacketToServer(data, PacketType.Chat, Constants.k_nSteamNetworkingSend_Reliable);
+            
         }
         public static Dictionary<string, GameObject> GetNetworkPrefabs()
         {
@@ -168,12 +175,21 @@ namespace RavenM.RSPatch.Wrapper
             }
             return output;
         }
+
+        // TODO: Test if it is decuplicated
         public static void AddVehiclesToNetworkPrefab()
         {
-            foreach (VehicleSpawner.VehicleSpawnType vehicleType in VehicleSpawner.ALL_VEHICLE_TYPES) {
-            
-                GameObject vehiclePrefab = VehicleSpawner.GetPrefab(0, vehicleType);
-                networkGameObjects.Add(vehiclePrefab.GetHashCode().ToString(), vehiclePrefab);
+            for (int i = 0; i < 2; i++)
+            {
+                var teamInfo = GameManager.instance.gameInfo.team[i];
+                foreach (var slotReal in teamInfo.vehicleSlot)
+                {
+                    foreach (var a in slotReal.Value.AllPrefabs())
+                    {
+                        var hash = a.GetHashCode().ToString();
+                        if (!networkGameObjects.ContainsKey(hash)) networkGameObjects.Add(hash, a);
+                    }
+                }
             }
             setupVehicles = true;
         }
