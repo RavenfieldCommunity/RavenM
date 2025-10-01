@@ -1000,6 +1000,7 @@ namespace RavenM
             var instantActionConfigMenu = Traverse.Create(InstantActionConfigMenu.instance);
             var mapEntryData = instantActionConfigMenu.Field("selectedMap").GetValue<MapEntryData>();
             var playerTeamDD = instantActionConfigMenu.Field("playerTeamDD").GetValue<TMP_Dropdown>();
+            var nightToggle = instantActionConfigMenu.Field("nightToggle").GetValue<Toggle>();
             // Don't allow spectator.
             if (playerTeamDD.value == 0)
             {
@@ -1017,7 +1018,7 @@ namespace RavenM
             if (IsLobbyOwner)
             {
                 SetLobbyDataDedup("gameMode", ((int)this.currentGameMode).ToString());
-                SetLobbyDataDedup("nightMode", InstantActionConfigMenu.instance.isNight.ToString());
+                SetLobbyDataDedup("nightMode", nightToggle.isOn.ToString());
                 SetLobbyDataDedup("botAmountEagle", instantActionConfigMenu.Field("botAmountEagleIF").GetValue<TMP_InputField>().text);
                 SetLobbyDataDedup("botAmountRaven", instantActionConfigMenu.Field("botAmountRavenIF").GetValue<TMP_InputField>().text);
                 SetLobbyDataDedup("respawnTime", instantActionConfigMenu.Field("respawnTimeIF").GetValue<TMP_InputField>().text);
@@ -1135,7 +1136,9 @@ namespace RavenM
                 var modeType = (GameModeType)int.Parse( SteamMatchmaking.GetLobbyData(ActualLobbyID, "gameMode") ); 
                 if ( modeType != currentGameMode )  // FIXME: the game mode should be chosen after the map is selected?
                     instantActionConfigMenu.Method("SetGameMode", GameManager.GetGameModePrefab(modeType)).GetValue();
-                InstantActionConfigMenu.instance.ToggleNight(bool.Parse(SteamMatchmaking.GetLobbyData(ActualLobbyID, "nightMode")));
+                var isNightEnable = bool.Parse(SteamMatchmaking.GetLobbyData(ActualLobbyID, "nightMode"));
+                InstantActionConfigMenu.instance.ToggleNight(isNightEnable);
+                nightToggle.isOn = isNightEnable;
                 instantActionConfigMenu.Field("configFlagsToggle").GetValue<Toggle>().isOn = false;
                 instantActionConfigMenu.Field("botAmountEagleIF").GetValue<TMP_InputField>().text = SteamMatchmaking.GetLobbyData(ActualLobbyID, "botAmountEagle");
                 instantActionConfigMenu.Field("botAmountRavenIF").GetValue<TMP_InputField>().text = SteamMatchmaking.GetLobbyData(ActualLobbyID, "botAmountRaven");
