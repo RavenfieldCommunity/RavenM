@@ -1259,12 +1259,17 @@ namespace RavenM
                         teamInfo.turretSlot[type].ClearEntries();
                         string[] turretListReal = turretList.Split(',');
 
-                        foreach (string vehicle_str in turretListReal)
+                        foreach (string turret_str in turretListReal)
                         {
-                            if (vehicle_str == string.Empty)
+                            if (turret_str == string.Empty)
                                 continue;
 
-                            string[] turretInfo = vehicle_str.Split('#');
+                            string[] turretInfo = turret_str.Split('#');
+                            if (turretInfo.Length < 3)
+                            {
+                                Plugin.logger.LogInfo(turret_str);
+                                continue;
+                            }
                             int idx = int.Parse(turretInfo[2]);
                             GameObject prefab;
                             if (bool.Parse(turretInfo[0]))
