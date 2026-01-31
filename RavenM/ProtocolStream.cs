@@ -165,7 +165,6 @@ namespace RavenM
             Write(value.Seat);
             Write(value.MovingPlatformVehicleId);
             Write(value.TargetDetectionProgress);
-            Write(value.ParachuteDeployed);
         }
 
         public void Write(ActorFlagsPacket value)

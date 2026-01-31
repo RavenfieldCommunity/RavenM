@@ -321,27 +321,11 @@ namespace RavenM
                 if (GameManager.instance == null || GameManager.instance.buildNumber == Plugin.EXPECTED_BUILD_NUMBER)
                     GUI.Label(rect, "RavenM loaded, press `M` to show UI on Instant Actions Menu.");
                 else
-                    GUI.Label(rect, $"RavenM may not work on EA{GameManager.instance.buildNumber}, require EA{Plugin.EXPECTED_BUILD_NUMBER}. press `M` to show UI on Instant Actions Menu.");
+                    GUI.Label(rect, $"RavenM suggests using EA{Plugin.EXPECTED_BUILD_NUMBER}. press `M` to show UI on Instant Actions Menu.");
             }
             else
                 GUI.Label(rect, $"{overwrittenStringToShow}");
         }
     }
-
-    public class InitMessageGUI : MonoBehaviour
-    {
-        public float maxlifetime;
-        public static string stringToShow;
-        public void Awake()
-        {
-            maxlifetime = Time.time + 30;
-            stringToShow = "RavenM loaded, press `M` to show UI";
-        }
-
-        public void OnGUI()
-        {
-            if (maxlifetime < Time.time) Destroy(this);
-            GUI.Label(new Rect(10, Screen.height - 20, 400, 40), $"{stringToShow}");
-        }
-    }
+                    
 }

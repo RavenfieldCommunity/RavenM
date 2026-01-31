@@ -57,8 +57,6 @@ namespace RavenM
         public int MovingPlatformVehicleId;
 
         public float TargetDetectionProgress;
-
-        public bool ParachuteDeployed;
     }
 
     public enum ActorStateFlags
