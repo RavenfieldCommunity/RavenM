@@ -17,6 +17,7 @@ using Ravenfield.Trigger;
 using UnityEngine.UI;
 using System.Threading.Tasks;
 using TMPro;
+using System.Runtime.Serialization;
 
 namespace RavenM
 {
@@ -128,7 +129,7 @@ namespace RavenM
             {
                 if (!vehicle.TryGetComponent(out PrefabTag _) && !Array.Exists(ignore, x => x == vehicle))
                 {
-                    Plugin.logger.LogInfo($"Detected map vehicle with name: {vehicle.name}, and from map: {map.metaData.displayName}.");
+                    Plugin.logger.LogDebug($"Detected map vehicle with name: {vehicle.name}, and from map: {map.metaData.displayName}.");
 
                     var tag = vehicle.gameObject.AddComponent<PrefabTag>();
                     tag.NameHash = vehicle.name.GetHashCode();
@@ -141,7 +142,7 @@ namespace RavenM
             {
                 if (!projectile.TryGetComponent(out PrefabTag _))
                 {
-                    Plugin.logger.LogInfo($"Detected map projectile with name: {projectile.name}, and from map: {map.metaData.displayName}.");
+                    Plugin.logger.LogDebug($"Detected map projectile with name: {projectile.name}, and from map: {map.metaData.displayName}.");
 
                     var tag = projectile.gameObject.AddComponent<PrefabTag>();
                     tag.NameHash = projectile.name.GetHashCode();
@@ -156,7 +157,7 @@ namespace RavenM
 
                 if (!prefab.TryGetComponent(out PrefabTag _))
                 {
-                    Plugin.logger.LogInfo($"Detected map destructible with name: {prefab.name}, and from map: {map.metaData.displayName}.");
+                    Plugin.logger.LogDebug($"Detected map destructible with name: {prefab.name}, and from map: {map.metaData.displayName}.");
 
                     IngameNetManager.TagPrefab(prefab, (ulong)map.metaData.displayName.GetHashCode());
                 }
@@ -182,7 +183,7 @@ namespace RavenM
 
                 IngameNetManager.instance.ClientDestructibles[id] = root;
 
-                Plugin.logger.LogInfo($"Registered new destructible root with name: {root.name} and id: {id}");
+                Plugin.logger.LogDebug($"Registered new destructible root with name: {root.name} and id: {id}");
             }
 
             IngameNetManager.instance.MapWeapons.Clear();
@@ -193,7 +194,7 @@ namespace RavenM
                     && !WeaponManager.instance.allWeapons.Contains(triggerEquipWeapon.weaponEntry))
                 {
                     var entry = triggerEquipWeapon.weaponEntry;
-                    Plugin.logger.LogInfo($"Detected map weapon with name: {entry.name}, and from map: {map.metaData.displayName}.");
+                    Plugin.logger.LogDebug($"Detected map weapon with name: {entry.name}, and from map: {map.metaData.displayName}.");
                     IngameNetManager.instance.MapWeapons.Add(entry);
                 }
             }
@@ -253,18 +254,18 @@ namespace RavenM
         {
             if (!LobbySystem.instance.InLobby)
             {
-                Plugin.logger.LogInfo("Non-lobby state, skip!");
+                Plugin.logger.LogDebug("Non-lobby state, skip!");
                 return true;
             }
             if (LobbySystem.instance.IsLobbyOwner)
             {
-                Plugin.logger.LogInfo("Mod config changed!");
+                Plugin.logger.LogDebug("Mod config changed!");
                 LobbySystem.instance.isListChanged = true;
                 return true;
             }
             else if (!LobbySystem.instance.isChangingList)
             {
-                Plugin.logger.LogInfo("Mod config blocked!");
+                Plugin.logger.LogDebug("Mod config blocked!");
                 return false;
             }
             return true;
@@ -278,7 +279,7 @@ namespace RavenM
         {
             if (!LobbySystem.instance.InLobby)
             {
-                Plugin.logger.LogInfo("Non-lobby state, skip!");
+                Plugin.logger.LogDebug("Non-lobby state, skip!");
                 return true;
             }
             else if (LobbySystem.instance.IsLobbyOwner)
@@ -713,6 +714,7 @@ namespace RavenM
             RequestModReload = false;
             LoadedServerMods = false;
             ChatManager.instance.FullChatLinkLastRealIndex = 0;
+            IngameNetManager.instance.isConnectedToServer = false;
             //instantActionConfigMenu.Method("SetMap", GameManager.GetGameModePrefab(currentGameMode)).GetValue();
 
             if (pCallback.m_EChatRoomEnterResponse != (uint)EChatRoomEnterResponse.k_EChatRoomEnterResponseSuccess)
@@ -1895,6 +1897,8 @@ namespace RavenM
                     {
                         if(GUILayout.Button("Force back"))
                             ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, "/forceback");
+                        if(GUILayout.Button("Send test packet"))
+                            IngameNetManager.instance.SendInteralMessagePacket("Test");
                     }
                     if (Plugin.instance.hasDetectedException && GUILayout.Button("Save error log"))
                         SaveAndOpenErrorLogFile();
@@ -1902,6 +1906,11 @@ namespace RavenM
                         OpenStorageDirectory();
                     if (GUILayout.Button("Save lobby info"))
                         SaveLobbyInfo();
+                    if (GUILayout.Button("Reset connection"))
+                    {
+                        ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, "Re-connect maunally");
+                        IngameNetManager.instance.StartCoroutine(IngameNetManager.instance.RepeatTryConnect());
+                    }
                     goto CancelShowInLobbyMenu;
                 }
                 for (int i = 0; i < len; i++)

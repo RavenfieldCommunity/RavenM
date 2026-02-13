@@ -28,6 +28,7 @@ namespace RavenM
             if (!IngameNetManager.instance.IsClient)
                 return;
 
+            Plugin.logger.LogInfo($"Close connection as ReturnToMenu()");
             SteamNetworkingSockets.CloseConnection(IngameNetManager.instance.C2SConnection, 0, string.Empty, false);
 
             if (IngameNetManager.instance.IsHost)
@@ -179,7 +180,7 @@ namespace RavenM
 
                 if (!prefab.TryGetComponent(out PrefabTag _))
                 {
-                    Plugin.logger.LogInfo($"Detected vehicle prefab with name: {prefab.name}, and from mod: {contentInfo.sourceMod.workshopItemId}");
+                    Plugin.logger.LogDebug($"Detected vehicle prefab with name: {prefab.name}, and from mod: {contentInfo.sourceMod.workshopItemId}");
 
                     IngameNetManager.TagPrefab(prefab, (ulong)contentInfo.sourceMod.workshopItemId);
                 }
@@ -192,7 +193,7 @@ namespace RavenM
 
                 if (!prefab.TryGetComponent(out PrefabTag _))
                 {
-                    Plugin.logger.LogInfo($"Detected projectile prefab with name: {prefab.name}, and from mod: {contentInfo.sourceMod.workshopItemId}");
+                    Plugin.logger.LogDebug($"Detected projectile prefab with name: {prefab.name}, and from mod: {contentInfo.sourceMod.workshopItemId}");
 
                     IngameNetManager.TagPrefab(prefab, (ulong)contentInfo.sourceMod.workshopItemId);
                 }
@@ -205,7 +206,7 @@ namespace RavenM
 
                 if (!prefab.TryGetComponent(out PrefabTag _))
                 {
-                    Plugin.logger.LogInfo($"Detected destructible prefab with name: {prefab.name}, and from mod: {contentInfo.sourceMod.workshopItemId}");
+                    Plugin.logger.LogDebug($"Detected destructible prefab with name: {prefab.name}, and from mod: {contentInfo.sourceMod.workshopItemId}");
 
                     IngameNetManager.TagPrefab(prefab, (ulong)contentInfo.sourceMod.workshopItemId);
                 }
@@ -220,14 +221,14 @@ namespace RavenM
         {
             foreach (var vehicle in __instance.defaultVehiclePrefabs)
             {
-                Plugin.logger.LogInfo($"Tagging default vehicle: {vehicle.name}");
+                Plugin.logger.LogDebug($"Tagging default vehicle: {vehicle.name}");
 
                 IngameNetManager.TagPrefab(vehicle);
             }
 
             foreach (var turret in __instance.defaultTurretPrefabs)
             {
-                Plugin.logger.LogInfo($"Tagging default turret: {turret.name}");
+                Plugin.logger.LogDebug($"Tagging default turret: {turret.name}");
 
                 IngameNetManager.TagPrefab(turret);
             }
@@ -235,7 +236,7 @@ namespace RavenM
             foreach (var projectile in Resources.FindObjectsOfTypeAll<Projectile>())
             {
                 var prefab = projectile.gameObject;
-                Plugin.logger.LogInfo($"Tagging default projectile: {prefab.name}");
+                Plugin.logger.LogDebug($"Tagging default projectile: {prefab.name}");
 
                 IngameNetManager.TagPrefab(prefab);
             }
@@ -243,7 +244,7 @@ namespace RavenM
             foreach (var destructible in Resources.FindObjectsOfTypeAll<Destructible>())
             {
                 var prefab = DestructiblePacket.Root(destructible);
-                Plugin.logger.LogInfo($"Tagging default destructible: {prefab.name}");
+                Plugin.logger.LogDebug($"Tagging default destructible: {prefab.name}");
 
                 IngameNetManager.TagPrefab(prefab);
             }
@@ -293,12 +294,12 @@ namespace RavenM
                 IngameNetManager.instance.ClientVehicles.Add(id, __instance);
                 IngameNetManager.instance.OwnedVehicles.Add(id);
 
-                Plugin.logger.LogInfo($"Registered new spawned vehicle with name: {__instance.name} and id: {id}");
+                Plugin.logger.LogDebug($"Registered new spawned vehicle with name: {__instance.name} and id: {id}");
             }
             // Again with the Projectile ID BS.
             else if (!__instance.TryGetComponent(out GuidComponent guid) || !IngameNetManager.instance.ClientVehicles.ContainsKey(guid.guid))
             {
-                Plugin.logger.LogInfo($"Cleaning up unwanted vehicle with name: {__instance.name}");
+                Plugin.logger.LogDebug($"Cleaning up unwanted vehicle with name: {__instance.name}");
                 typeof(Vehicle).GetMethod("Cleanup", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(__instance, new object[] { });
                 return false;
             }
@@ -316,7 +317,7 @@ namespace RavenM
                 return true;
 
             var root = DestructiblePacket.Root(__instance);
-            Plugin.logger.LogInfo($"D: {root.name}");
+            Plugin.logger.LogDebug($"D: {root.name}");
 
             if (IngameNetManager.instance.IsHost)
             {
@@ -332,12 +333,12 @@ namespace RavenM
 
                 IngameNetManager.instance.ClientDestructibles.Add(id, root);
 
-                Plugin.logger.LogInfo($"Registered new destructible root with name: {root.name} and id: {id}");
+                Plugin.logger.LogDebug($"Registered new destructible root with name: {root.name} and id: {id}");
             }
             else if (!root.TryGetComponent(out GuidComponent guid) ||
                 (!root.TryGetComponent(out Vehicle _) && !IngameNetManager.instance.ClientDestructibles.ContainsKey(guid.guid)))
             {
-                Plugin.logger.LogInfo($"Cleaning up unwanted destructible with name: {root.name}");
+                Plugin.logger.LogDebug($"Cleaning up unwanted destructible with name: {root.name}");
                 UnityEngine.Object.Destroy(root);
                 return false;
             }
@@ -400,11 +401,11 @@ namespace RavenM
 
                 IngameNetManager.instance.SendPacketToServer(data, PacketType.SpawnProjectile, Constants.k_nSteamNetworkingSend_Reliable);
 
-                Plugin.logger.LogInfo($"Registered new spawned projectile with name: {__instance.name} and id: {id}");
+                Plugin.logger.LogDebug($"Registered new spawned projectile with name: {__instance.name} and id: {id}");
             }
             else if (!__instance.TryGetComponent(out GuidComponent guid) || !IngameNetManager.instance.ClientProjectiles.ContainsKey(guid.guid))
             {
-                Plugin.logger.LogInfo($"Cleaning up unwanted projectile with name: {__instance.name}");
+                Plugin.logger.LogDebug($"Cleaning up unwanted projectile with name: {__instance.name}");
                 typeof(Projectile).GetMethod("Cleanup", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(__instance, new object[] { false });
                 return false;
             }
@@ -555,6 +556,9 @@ namespace RavenM
 
         public bool IsHost = false;
 
+        /// <summary>
+        /// Is user client-side? (after `StartAsClient()`)
+        /// </summary>
         public bool IsClient = false;
 
         public Texture2D MarkerTexture = new Texture2D(2, 2);
@@ -596,6 +600,9 @@ namespace RavenM
         public KeyCode PlaceMarkerKeybind = KeyCode.BackQuote;
 
         public List<WeaponManager.WeaponEntry> MapWeapons = new List<WeaponManager.WeaponEntry>();
+
+        public bool isConnectedToServer = false;
+        public int whenStartConnecting;
 
         private void Awake()
         {
@@ -672,27 +679,33 @@ namespace RavenM
             if (Input.GetKeyDown(KeyCode.F7))
                 _showSpecificOutbound = !_showSpecificOutbound;
 
-            // AKA Tilde Key.
-            if (Input.GetKeyDown(PlaceMarkerKeybind)
-                && GameManager.instance != null && GameManager.IsIngame()
-                && !ActorManager.instance.player.dead
-                && ActorManager.instance.player.activeWeapon != null)
+            if (GameManager.instance != null && GameManager.IsIngame() && !isConnectedToServer && Settings.forceRepeatConnecting.Value && Time.time - whenStartConnecting > 23)
             {
-                Physics.Raycast(ActorManager.instance.player.activeWeapon.transform.position, ActorManager.instance.player.activeWeapon.transform.forward, out RaycastHit hit, Mathf.Infinity, Physics.AllLayers);
-
-                if (hit.point != null)
-                {
-                    Plugin.logger.LogInfo($"Placing marker at: {hit.point}");
-
-                    if ((hit.point - MarkerPosition).magnitude > 10)
-                    {
-                        MarkerPosition = hit.point;
-                        MarkerAppliedUntilTime = Time.time + 10f;
-                    }
-                    else
-                        MarkerPosition = Vector3.zero;
-                }
+                StartCoroutine(RepeatTryConnect());
+                Plugin.logger.LogInfo("Re-connecting for timeout in Update()");
             }
+
+            // AKA Tilde Key.
+                if (Input.GetKeyDown(PlaceMarkerKeybind)
+                    && GameManager.instance != null && GameManager.IsIngame()
+                    && !ActorManager.instance.player.dead
+                    && ActorManager.instance.player.activeWeapon != null)
+                {
+                    Physics.Raycast(ActorManager.instance.player.activeWeapon.transform.position, ActorManager.instance.player.activeWeapon.transform.forward, out RaycastHit hit, Mathf.Infinity, Physics.AllLayers);
+
+                    if (hit.point != null)
+                    {
+                        Plugin.logger.LogDebug($"Placing marker at: {hit.point}");
+
+                        if ((hit.point - MarkerPosition).magnitude > 10)
+                        {
+                            MarkerPosition = hit.point;
+                            MarkerAppliedUntilTime = Time.time + 10f;
+                        }
+                        else
+                            MarkerPosition = Vector3.zero;
+                    }
+                }
 
             SendActorFlags();
 
@@ -828,15 +841,18 @@ namespace RavenM
 
             ChatManager.instance.InteralMessageToAppend2 = $"{(markerCount == 0 ? "" : $"Markers: {markerCount}; ")}{(voiceCount == 0 ? "" : $"Voices: {voiceCount}; ")}";
 
-            GUI.Label(new Rect(10, 30, 200, 40), $"Inbound: {_pps} PPS");
-            GUI.Label(new Rect(10, 50, 200, 40), $"Outbound: {_ppsOut} PPS -- {_bytesOut} Bytes");
+            if (Settings.debugMode.Value)
+            {
+                GUI.Label(new Rect(10, 30, 200, 40), $"Inbound: {_pps} PPS");
+                GUI.Label(new Rect(10, 50, 200, 40), $"Outbound: {_ppsOut} PPS -- {_bytesOut} Bytes");
+            }
 
             SteamNetConnectionRealTimeStatus_t pStats = new SteamNetConnectionRealTimeStatus_t();
             SteamNetConnectionRealTimeLaneStatus_t pLanes = new SteamNetConnectionRealTimeLaneStatus_t();
             SteamNetworkingSockets.GetConnectionRealTimeStatus(C2SConnection, ref pStats, 0, ref pLanes);
             GUI.Label(new Rect(10, 80, 200, 40), $"Ping: {pStats.m_nPing} ms");
 
-            if (_showSpecificOutbound)
+            if (Settings.debugMode.Value && _showSpecificOutbound)
             {
                 var ordered = _savedBytesOuts.OrderBy(x => -x.Value).ToDictionary(x => x.Key, x => x.Value);
                 int i = 0;
@@ -944,7 +960,7 @@ namespace RavenM
 
         public void StartAsServer()
         {
-            Plugin.logger.LogInfo("Starting server and client.");
+            Plugin.logger.LogInfo("Starting server.");
 
             IsHost = true;
 
@@ -986,31 +1002,21 @@ namespace RavenM
                 OwnedActors.Add(id);
             }
 
-            var iden = new SteamNetworkingIdentity
-            {
-                m_eType = ESteamNetworkingIdentityType.k_ESteamNetworkingIdentityType_SteamID,
-            };
 
-            iden.SetSteamID(host);
-
-            StartCoroutine(RepeatTryConnect(iden));
+            StartCoroutine(RepeatTryConnect());
         }
 
-        IEnumerator RepeatTryConnect(SteamNetworkingIdentity iden)
+        public IEnumerator RepeatTryConnect()
         {
+            isConnectedToServer = false;
+            whenStartConnecting = (int)Time.time;
+            if (C2SConnection != null || C2SConnection == HSteamNetConnection.Invalid)
+                SteamNetworkingSockets.CloseConnection(C2SConnection, 0, string.Empty, false);
             for (int i = 0; i < 30; i++)
             {
                 Plugin.logger.LogInfo($"Attempting connection... {i + 1}/30");
 
-                // Set the initial connection timeout to 2 minutes, for slow hosts.
-                SteamNetworkingConfigValue_t timeout = new SteamNetworkingConfigValue_t
-                {
-                    m_eValue = ESteamNetworkingConfigValue.k_ESteamNetworkingConfig_TimeoutInitial,
-                    m_eDataType = ESteamNetworkingConfigDataType.k_ESteamNetworkingConfig_Int32,
-                    m_val = new SteamNetworkingConfigValue_t.OptionValue { m_int32 = 2 * 60 * 1000 },
-                };
-
-                C2SConnection = SteamNetworkingSockets.ConnectP2P(ref iden, 0, 1, new SteamNetworkingConfigValue_t[] { timeout });
+                ConnectP2P();
 
                 if (C2SConnection != HSteamNetConnection.Invalid)
                     yield break;
@@ -1018,7 +1024,30 @@ namespace RavenM
                 yield return new WaitForSeconds(0.5f);
             }
 
-            GameManager.ReturnToMenu();
+            if (!isConnectedToServer)
+            {
+                GameManager.ReturnToMenu();
+                ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, "Connecting failed", ChatManager.HASH_COLOR_RED);
+            }
+        }
+
+        private void ConnectP2P()
+        {         
+            var iden = new SteamNetworkingIdentity
+            {
+                m_eType = ESteamNetworkingIdentityType.k_ESteamNetworkingIdentityType_SteamID,
+            };
+
+            iden.SetSteamID(LobbySystem.instance.OwnerID);
+            // Set the initial connection timeout to 2 minutes, for slow hosts.
+            SteamNetworkingConfigValue_t timeout = new SteamNetworkingConfigValue_t
+            {
+                m_eValue = ESteamNetworkingConfigValue.k_ESteamNetworkingConfig_TimeoutInitial,
+                m_eDataType = ESteamNetworkingConfigDataType.k_ESteamNetworkingConfig_Int32,
+                m_val = new SteamNetworkingConfigValue_t.OptionValue { m_int32 = 2 * 60 * 1000 },
+            };
+
+            C2SConnection = SteamNetworkingSockets.ConnectP2P(ref iden, 0, 1, new SteamNetworkingConfigValue_t[] { timeout });
         }
 
         /// <summary>
@@ -1093,8 +1122,9 @@ namespace RavenM
         private void OnConnectionStatus(SteamNetConnectionStatusChangedCallback_t pCallback)
         {
             var info = pCallback.m_info;
-
+            Plugin.logger.LogInfo("OnConnectionStatus");
             // Callback while server
+            // if callback isnt invaild
             if (info.m_hListenSocket != HSteamListenSocket.Invalid)
             {
                 switch (info.m_eState)
@@ -1105,7 +1135,7 @@ namespace RavenM
                         bool inLobby = false;
                         foreach (var memberId in LobbySystem.instance.GetLobbyMembers())
                         {
-                            if (info.m_identityRemote.GetSteamID() == memberId)
+                            if (!LobbySystem.instance.CurrentBannedMembers.Contains(memberId) && info.m_identityRemote.GetSteamID() == memberId)
                             {
                                 inLobby = true;
                                 break;
@@ -1145,8 +1175,10 @@ namespace RavenM
                         break;
 
                     case ESteamNetworkingConnectionState.k_ESteamNetworkingConnectionState_ClosedByPeer:
+                        Plugin.logger.LogInfo("Connection closed by peer for invaild hSock.");
+                        break;
                     case ESteamNetworkingConnectionState.k_ESteamNetworkingConnectionState_ProblemDetectedLocally:
-                        Plugin.logger.LogInfo($"Killing connection from {info.m_identityRemote.GetSteamID()}.");
+                        Plugin.logger.LogInfo($"Killing connection from {info.m_identityRemote.GetSteamID()} for invaild hSock.");
                         SteamNetworkingSockets.CloseConnection(pCallback.m_hConn, 0, null, false);
 
                         // We destroy all the actors that were left behind.
@@ -1226,20 +1258,22 @@ namespace RavenM
                         break;
                 }
             }
-            else
+            else  // if the HSteamListenSocket is invaild
             {
                 switch (info.m_eState)
                 {
                     case ESteamNetworkingConnectionState.k_ESteamNetworkingConnectionState_Connected:
                         Plugin.logger.LogInfo("Connected to server.");
+                        if(!isConnectedToServer)
+                            ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, "Connected");
+                        isConnectedToServer = true;
                         break;
 
                     case ESteamNetworkingConnectionState.k_ESteamNetworkingConnectionState_ClosedByPeer:
+                        Plugin.logger.LogInfo($"Connection closed by peer for vaild hSock.");
+                        break;
                     case ESteamNetworkingConnectionState.k_ESteamNetworkingConnectionState_ProblemDetectedLocally:
-                        Plugin.logger.LogInfo($"Killing connection from {info.m_identityRemote.GetSteamID()}.");
-                        SteamNetworkingSockets.CloseConnection(pCallback.m_hConn, 0, null, false);
-
-                        GameManager.ReturnToMenu();
+                        Plugin.logger.LogInfo($"Killing connection from {info.m_identityRemote.GetSteamID()} for vaild hSock.");
                         break;
                 }
             }
@@ -1504,7 +1538,7 @@ namespace RavenM
                                         }
                                         else
                                         {
-                                            Plugin.logger.LogInfo($"New vehicle registered with ID {vehiclePacket.Id} name {vehiclePacket.NameHash} mod {vehiclePacket.Mod}");
+                                            Plugin.logger.LogDebug($"New vehicle registered with ID {vehiclePacket.Id} name {vehiclePacket.NameHash} mod {vehiclePacket.Mod}");
 
                                             var tag = new Tuple<int, ulong>(vehiclePacket.NameHash, vehiclePacket.Mod);
 
@@ -1558,7 +1592,7 @@ namespace RavenM
                                 break;
                             case PacketType.Damage:
                                 {
-                                    Plugin.logger.LogInfo("Damage packet.");
+                                    Plugin.logger.LogDebug("Damage packet.");
                                     DamagePacket damage_packet = dataStream.ReadDamagePacket();
 
                                     if (!ClientActors.ContainsKey(damage_packet.Target))
@@ -1567,7 +1601,7 @@ namespace RavenM
                                     Actor sourceActor = damage_packet.SourceActor == -1 ? null : ClientActors[damage_packet.SourceActor];
                                     Actor targetActor = ClientActors[damage_packet.Target];
 
-                                    Plugin.logger.LogInfo($"Got damage from {targetActor.name}!");
+                                    Plugin.logger.LogDebug($"Got damage from {targetActor.name}!");
 
                                     DamageInfo damage_info = new DamageInfo
                                     {
@@ -1589,7 +1623,7 @@ namespace RavenM
                                 break;
                             case PacketType.Death:
                                 {
-                                    Plugin.logger.LogInfo("Death packet.");
+                                    Plugin.logger.LogDebug("Death packet.");
                                     DamagePacket damage_packet = dataStream.ReadDamagePacket();
 
                                     if (!ClientActors.ContainsKey(damage_packet.Target))
@@ -1598,7 +1632,7 @@ namespace RavenM
                                     Actor sourceActor = damage_packet.SourceActor == -1 ? null : ClientActors[damage_packet.SourceActor];
                                     Actor targetActor = ClientActors[damage_packet.Target];
 
-                                    Plugin.logger.LogInfo($"Got death from {targetActor.name}!");
+                                    Plugin.logger.LogDebug($"Got death from {targetActor.name}!");
 
                                     DamageInfo damage_info = new DamageInfo
                                     {
@@ -1623,7 +1657,7 @@ namespace RavenM
                                 break;
                             case PacketType.EnterSeat:
                                 {
-                                    Plugin.logger.LogInfo("Enter packet.");
+                                    Plugin.logger.LogDebug("Enter packet.");
                                     var enterSeatPacket = dataStream.ReadEnterSeatPacket();
 
                                     if (OwnedActors.Contains(enterSeatPacket.ActorId))
@@ -1674,7 +1708,7 @@ namespace RavenM
                                 break;
                             case PacketType.LeaveSeat:
                                 {
-                                    Plugin.logger.LogInfo("Leave packet.");
+                                    Plugin.logger.LogDebug("Leave packet.");
                                     var leaveSeatPacket = dataStream.ReadLeaveSeatPacket();
 
                                     if (OwnedActors.Contains(leaveSeatPacket.Id))
@@ -2133,7 +2167,7 @@ namespace RavenM
                                     // RemoteDetonatedProjectiles don't explode like normal projectiles.
                                     if (projectile.GetType() == typeof(RemoteDetonatedProjectile))
                                     {
-                                        Plugin.logger.LogInfo($"Detonate.");
+                                        Plugin.logger.LogDebug($"Detonate.");
                                         (projectile as RemoteDetonatedProjectile).Detonate();
                                     }
                                     else
@@ -2162,8 +2196,7 @@ namespace RavenM
                                 {
                                     var chatPacket = dataStream.ReadChatPacket();
 
-                                    var actor = ClientActors.ContainsKey(chatPacket.Id) ? ClientActors[chatPacket.Id] : null;
-                                    ChatManager.instance.AppendToChatLink(msg.m_identityPeer.GetSteamID().m_SteamID, chatPacket.Message, teamOnly: !chatPacket.TeamOnly);
+                                    Plugin.logger.LogInfo($"Interal Message: {chatPacket.Message}");
                                 }
                                 break;
                             case PacketType.Voip:
@@ -2206,7 +2239,7 @@ namespace RavenM
                                 break;
                             case PacketType.VehicleDamage:
                                 {
-                                    Plugin.logger.LogInfo("Vehicle damage packet.");
+                                    Plugin.logger.LogDebug("Vehicle damage packet.");
                                     DamagePacket damage_packet = dataStream.ReadDamagePacket();
 
                                     if (!ClientVehicles.ContainsKey(damage_packet.Target))
@@ -2215,7 +2248,7 @@ namespace RavenM
                                     Actor sourceActor = damage_packet.SourceActor == -1 ? null : ClientActors[damage_packet.SourceActor];
                                     Vehicle targetVehicle = ClientVehicles[damage_packet.Target];
 
-                                    Plugin.logger.LogInfo($"Got vehicle damage from {targetVehicle.name}!");
+                                    Plugin.logger.LogDebug($"Got vehicle damage from {targetVehicle.name}!");
 
                                     DamageInfo damage_info = new DamageInfo
                                     {
@@ -2470,7 +2503,7 @@ namespace RavenM
 
                         if (res != EResult.k_EResultOK)
                         {
-                            Plugin.logger.LogError($"Failure {res}");
+                            Plugin.logger.LogError($"Failed connection {connection.m_HSteamNetConnection} by {res}, removed now");
                             ServerConnections.RemoveAt(i);
                             SteamNetworkingSockets.CloseConnection(connection, 0, null, false);
                         }
@@ -2721,6 +2754,26 @@ namespace RavenM
 
             SendPacketToServer(data, PacketType.GameStateUpdate, Constants.k_nSteamNetworkingSend_Unreliable);
         }
+        
+        public void SendInteralMessagePacket(string msg)
+        {
+            using MemoryStream memoryStream = new MemoryStream();
+            var chatPacket = new ChatPacket
+            {
+                Id = 0,
+                Message = msg,
+                TeamOnly = false,
+            };
+
+            using (var writer = new ProtocolWriter(memoryStream))
+            {
+                writer.Write(chatPacket);
+            }
+            byte[] data = memoryStream.ToArray();
+
+            IngameNetManager.instance.SendPacketToServer(data, PacketType.Chat, Constants.k_nSteamNetworkingSend_Reliable);
+        }
+        
 
         private int GenerateFlags(Actor actor)
         {

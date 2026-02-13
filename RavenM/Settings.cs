@@ -21,6 +21,7 @@ public static class Settings
     public static ConfigEntry<float> voiceChatVolume;
     public static ConfigEntry<KeyboardShortcut> voiceChatKeybind;
     public static ConfigEntry<bool> useClassicKeybindHook;
+    public static ConfigEntry<bool> forceRepeatConnecting;
     public static ConfigEntry<KeyboardShortcut> globalChatKeybind;
     public static ConfigEntry<KeyboardShortcut> teamChatKeybind;
     public static ConfigEntry<KeyboardShortcut> placeMarkerKeybind;
@@ -58,6 +59,7 @@ public static class Settings
         markerAliveTime = config.Bind("RavenM.Configs","Marker alive time",20,"How long the marker will keep showing by default(0 is disable to hide automatically).");
         chatFieldHiddenDelay = config.Bind("RavenM.Configs","Chat field hidden delay",0,"How long will chat field keep showing after delay when new message received(0 is disable to hide automatically).");
         showTipsAnnouncement = config.Bind("RavenM.Configs","Show tips announcement", true,"");
+        forceRepeatConnecting = config.Bind("RavenM.Configs","Force repeat connecting", true,"Auto reepeat connecting to server when timeout");
         debugMode = config.Bind("RavenM.ZDebug", "Debug mode", false, "");
         tipsAnnoucement = config.Bind("RavenM.ZDebug.Data", "tipsAnnoucement", "Remember to check updates on our site often!\n---\nThank all testers in discord server for debugging!", "");
         lastGetTipsAnnoucementDate = config.Bind("RavenM.ZDebug.Data", "lastGetTipsAnnoucementDate", "", "");
