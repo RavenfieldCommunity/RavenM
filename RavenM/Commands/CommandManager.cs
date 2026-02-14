@@ -1,4 +1,5 @@
-﻿using Steamworks;
+﻿using RavenM.DiscordGameSDK;
+using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -362,6 +363,35 @@ namespace RavenM.Commands
                             IngameMenuUi.instance.Menu();
                         else
                             GameManager.ReturnToMenu();
+                    }
+                }
+            }
+            );
+            Commands.Add(new Command(
+                _name: "chatonly",
+                _global: false,
+                _reqArgs: null,
+                _hostOnly: false,
+                scripted: true,
+                allowInLobby: true,
+                allowInGame: false,
+                helpMessage: "Check lobby status if we can exit from chat only state to join game, client id match is needed",
+                syntaxMessage: "/chatonly")
+            {
+                Action = (string originalStringTrimed, bool isLocal) =>
+                {
+                    if (!LobbySystem.instance.IsClientIdMatched(LobbySystem.instance.ActualLobbyID))
+                    {
+                        ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, "Client id match is mismatched", ChatManager.HASH_COLOR_RED);
+                    }
+                    else if (SteamMatchmaking.GetLobbyData(LobbySystem.instance.ActualLobbyID, LobbySystem.HASH_LOBBYDATA_STARTED) != LobbySystem.HASH_LOBBYDATA_STARTED_YES)
+                    {
+                        ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, "Chat only exited");
+                        LobbySystem.instance.isChatOnlyLobby = false;
+                    }
+                    else
+                    {
+                        ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, "The host is in gaming now, cannot exit from chat only mode");
                     }
                 }
             }

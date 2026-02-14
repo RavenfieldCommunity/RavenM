@@ -513,10 +513,17 @@ namespace RavenM
         private Vector2 guiScrollPosition = Vector2.zero;
         private Vector2 guiScrollPosition2 = Vector2.zero;
 
-        public static string HASH_LOBBYDATA_TEAM_E = "E";
-        public static string HASH_LOBBYDATA_TEAM_R = "R";
-        public static string HASH_LOBBYDATA_TEAM_I = "I";
+        public bool isChatOnlyLobby = false;
+
+        public static string HASH_LOBBYDATAM_TEAM_E = "E";
+        public static string HASH_LOBBYDATAM_TEAM_R = "R";
+        public static string HASH_LOBBYDATAM_TEAM_I = "I";
+        public static string HASH_LOBBYDATAM_TEAM_GUEST = "G";
         public static string HASH_LOBBYDATA_TRUE = "true";
+        public static string HASH_LOBBYDATA_BUILDID = "build_id";
+        public static string HASH_LOBBYDATA_STARTED = "started";
+        public static string HASH_LOBBYDATA_STARTED_YES = "yes";
+        public static string HASH_LOBBYDATA_HOTJOIN = "hotjoin";
 
         private void Awake()
         {
@@ -704,6 +711,11 @@ namespace RavenM
                 OpenLobbies.Remove(lobby);
         }
 
+        public bool IsClientIdMatched(CSteamID id)
+        {
+            return Plugin.BuildGUID == SteamMatchmaking.GetLobbyData(id, HASH_LOBBYDATA_BUILDID);
+        }
+
         private void OnLobbyEnter(LobbyEnter_t pCallback)
         {
             Plugin.logger.LogInfo("Joined lobby!");
@@ -711,6 +723,7 @@ namespace RavenM
             LobbySetCache.Clear();
             CleanModConfigList();
             isListChanged = true;
+            isChatOnlyLobby = false;
             RequestModReload = false;
             LoadedServerMods = false;
             ChatManager.instance.FullChatLinkLastRealIndex = 0;
@@ -804,6 +817,7 @@ namespace RavenM
                 MainMenu.instance.OpenPageIndex(MainMenu.PAGE_INSTANT_ACTION);
                 ReadyToPlay = false;
 
+                /*
                 if (Plugin.BuildGUID != SteamMatchmaking.GetLobbyData(ActualLobbyID, "build_id") && !AllowClientDifference)
                 {
                     Plugin.logger.LogInfo("Build ID mismatch! Leaving lobby.");
@@ -811,6 +825,13 @@ namespace RavenM
                     SteamMatchmaking.LeaveLobby(ActualLobbyID);
                     return;
                 }
+                */
+                if (!IsClientIdMatched(ActualLobbyID))
+                {
+                    isChatOnlyLobby = true;
+                    ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, "You are chat only now due to client id mismatch so you will not enter game", ChatManager.HASH_COLOR_RED);
+                }
+
 
                 ServerMods.Clear();
                 ModsToDownload.Clear();
@@ -860,11 +881,16 @@ namespace RavenM
                 {
                     nameTagsForTeamOnly = false;
                 }
-                if (SteamMatchmaking.GetLobbyData(ActualLobbyID, "started") == "yes" && SteamMatchmaking.GetLobbyData(ActualLobbyID, "hotjoin") != "true")
+                if (SteamMatchmaking.GetLobbyData(ActualLobbyID, HASH_LOBBYDATA_STARTED) == HASH_LOBBYDATA_STARTED_YES && SteamMatchmaking.GetLobbyData(ActualLobbyID, HASH_LOBBYDATA_HOTJOIN) != HASH_LOBBYDATA_TRUE)
                 {
+                    isChatOnlyLobby = true;
+                    /*
                     Plugin.logger.LogInfo("The game has already started :( Leaving lobby.");
                     NotificationText = "This lobby has already started a match and has disabled mid-game joining or is playing a gamemode that does not support it.";
                     SteamMatchmaking.LeaveLobby(ActualLobbyID);
+                    */
+                    ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, IsClientIdMatched(ActualLobbyID) ? "You are chat only now due to already started game, you can refresh it by command `/chatonly` when host is back from game" : "You are chat only now due to client id mismatch so you will not enter game", ChatManager.HASH_COLOR_RED);
+
                 }
                 EnableGodInspect = SteamMatchmaking.GetLobbyData(ActualLobbyID, "photoModeEnabled") == "true";
                 EnableWallhack = SteamMatchmaking.GetLobbyData(ActualLobbyID, "wallhack") == "true";
@@ -1003,8 +1029,13 @@ namespace RavenM
             var mapEntryData = instantActionConfigMenu.Field("selectedMap").GetValue<MapEntryData>();
             var playerTeamDD = instantActionConfigMenu.Field("playerTeamDD").GetValue<TMP_Dropdown>();
             var nightToggle = instantActionConfigMenu.Field("nightToggle").GetValue<Toggle>();
+            if (isChatOnlyLobby)
+            {
+                SetLobbyMemberDataDedup("team", HASH_LOBBYDATAM_TEAM_GUEST);
+                return;
+            }
             // Don't allow spectator.
-            if (playerTeamDD.value == 0)
+            else if (playerTeamDD.value == 0)
             {
                 SetLobbyMemberDataDedup("team", "E");
             }
@@ -1723,11 +1754,12 @@ namespace RavenM
                         GUIStack.Pop();
 
                     var lobbyGUID = SteamMatchmaking.GetLobbyData(LobbyView, "build_id");
-                    if (lobbyGUID != Plugin.BuildGUID)
+                    var idMismatched = lobbyGUID != Plugin.BuildGUID;
+                    if (idMismatched)
                     {
                         GUILayout.Label($"<color=red>Uncompatible lobby with current version's RavenM or game maybe!</color>\nTarget client id: {lobbyGUID}");
                     }
-                    else if (GUILayout.Button("JOIN"))
+                    if (GUILayout.Button(idMismatched ? "JOIN CHAT ONLY" : "JOIN"))
                     {
                         // yeah some compatible ability with ravenm cn build
                         if (SteamMatchmaking.GetLobbyData(LobbyView, "lobbyPasssword") == "")
