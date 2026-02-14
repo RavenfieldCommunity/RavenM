@@ -11,6 +11,7 @@ using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 using SimpleJSON;
+using UnityEngine.SceneManagement;
 namespace RavenM
 {
     /// <summary>
@@ -59,7 +60,7 @@ namespace RavenM
         public static string customBuildInMutators;
         public static List<string> customMutatorsDirectories = new List<string>();
 
-        public static bool JoinedLobbyFromArgument = false;
+        public CSteamID startupLobbyId;
 
         public static int currentGameBuildNumber = 0;
         public static Dictionary<string, string> Arguments = new Dictionary<string, string>();
@@ -99,13 +100,14 @@ namespace RavenM
             instance = this;
             logger = Logger;
             config = Config;
-            
+
             // global error handle, if has error then save log to another path when quitting game so the log wnot lose
-            Application.logMessageReceived += (string logString, string stackTrace, LogType type) => {
+            Application.logMessageReceived += (string logString, string stackTrace, LogType type) =>
+            {
                 if ((type == LogType.Error || type == LogType.Exception) && hasDetectedException == false)
                     hasDetectedException = true;
             };
-            
+
             Settings.Init();
 
 
@@ -119,6 +121,19 @@ namespace RavenM
                     InitLoadMessage();
                     InitMessageGUI.overwrittenStringToShow = "RavenM unloaded.";
                     Destroy(this);
+                }
+                if (args[i] == "+connect_lobby")
+                {
+                    try
+                    {
+                        startupLobbyId = new CSteamID(ulong.Parse(args[i + 1]));
+                        logger.LogInfo("Startup lobby id: " + args[i + 1]);
+                        Instantiate(new GameObject("RavenMPregamingObject", typeof(PregamingMenuUI)));
+                    }
+                    catch (Exception e)
+                    {
+                        logger.LogError(e);
+                    }
                 }
             }
 
@@ -163,23 +178,20 @@ namespace RavenM
             {
                 Logger.LogError($"Failed to patch: {e}");
             }
+            InitLoadMessage();
 
-            foreach (var argument in args)
+            // TODO: unfinished
+            if (Environment.CommandLine.Contains("-nocontentmods") && !Environment.CommandLine.Contains(" -nointro") && false)
             {
-                if (argument.Contains("="))
+                logger.LogInfo("Launch pre-gaming status");
+
+                foreach (var gameObject in SceneManager.GetActiveScene().GetRootGameObjects())
                 {
-                    string[] argumentVals = argument.Split('=');
-                    string argumentName = argumentVals[0];
-                    string argumentValue = argumentVals[1];
-                    Arguments.Add(argumentName, argumentValue);
-                }
-                else
-                {
-                    Arguments.Add(argument, "");
+                    if (gameObject.GetComponent<Camera>() == null)
+                        Destroy(gameObject);
                 }
             }
-            InitLoadMessage();
-            
+
             // get tips annoucement
             Task.Run(() =>
             {
@@ -197,7 +209,7 @@ namespace RavenM
                     }
                     JSONNode json = null;
                     try { json = GetJson("https://api.github.com/repos/RavenfieldCommunity/RavenM/releases/237069307"); }
-                    catch(Exception e)
+                    catch (Exception e)
                     {
                         Logger.LogError(e);
                     }
@@ -260,6 +272,10 @@ namespace RavenM
                 DontDestroyOnLoad(discordObject);
                 // Repush settings 
                 Settings.OnSettingUpdate();
+                if (startupLobbyId != CSteamID.Nil)
+                {
+                    SceneManager.LoadScene(1);
+                }
             }
             this.enabled = false;
         }
@@ -279,16 +295,6 @@ namespace RavenM
                 writer.Write("They are named e.g. `Player_2025-03-02-15-47.log.txt`\nPAY ATTENTION TO THE DATE IN THE FILE NAMES!!!\nBETTER NOT TO USE `Playe.log` or `Playe-prev.log`!!!");
                 writer.Close();
             */
-        }
-
-        void JoinLobbyFromArgument()
-        {
-            JoinedLobbyFromArgument = true;
-            CSteamID lobbyId = new CSteamID(ulong.Parse(Arguments["-ravenm-lobby"]));
-            SteamMatchmaking.JoinLobby(lobbyId);
-            LobbySystem.instance.InLobby = true;
-            LobbySystem.instance.IsLobbyOwner = false;
-            LobbySystem.instance.LobbyDataReady = false;
         }
         
         private Stream MakeRequest(string url)
