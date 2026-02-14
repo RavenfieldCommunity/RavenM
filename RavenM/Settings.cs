@@ -30,7 +30,9 @@ public static class Settings
     public static ConfigEntry<float> chatYOffset;
     public static ConfigEntry<float> chatXOffset;
     public static ConfigEntry<int> chatFontSize;
+    public static ConfigEntry<bool> chatUsernameLessLength;
     public static ConfigEntry<bool> showInLobbyMenuAtPauseMenu;
+    public static ConfigEntry<bool> showInLobbyMenuFriendship;
     public static ConfigEntry<string> tipsAnnoucement;
     public static ConfigEntry<string> lastGetTipsAnnoucementDate;
     public static ConfigEntry<int> markerAliveTime;
@@ -55,7 +57,9 @@ public static class Settings
         chatYOffset = config.Bind("RavenM.IngameUI.Chat","Chat field YOffset",370f,"Chat field y-axis position.");
         chatXOffset = config.Bind("RavenM.IngameUI.Chat","Chat field XOffset",10f,"Chat field x-axis position.");
         chatFontSize = config.Bind("RavenM.IngameUI.Chat","Chat field font size",0,"Change the font size of chat field(0 is disable).");
+        chatUsernameLessLength = config.Bind("RavenM.IngameUI.Chat","Chat username less length",true,"Shorten the username show in chat message");
         showInLobbyMenuAtPauseMenu = config.Bind("RavenM.IngameUI.InLobbyMenu", "Show InLobbyMenu at pause menu", true, "Show InLobbyMenu at pause menu, otherwise at loadout ui");
+        showInLobbyMenuFriendship = config.Bind("RavenM.IngameUI.InLobbyMenu", "Show friendship in InLobbyMenu", true, "Show friendship in InLobbyMenu at member list");
         markerAliveTime = config.Bind("RavenM.Configs","Marker alive time",20,"How long the marker will keep showing by default(0 is disable to hide automatically).");
         chatFieldHiddenDelay = config.Bind("RavenM.Configs","Chat field hidden delay",0,"How long will chat field keep showing after delay when new message received(0 is disable to hide automatically).");
         showTipsAnnouncement = config.Bind("RavenM.Configs","Show tips announcement", true,"");

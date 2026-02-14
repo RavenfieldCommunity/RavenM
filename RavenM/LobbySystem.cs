@@ -1973,6 +1973,15 @@ namespace RavenM
                     if (memberId != SelectedMemberPrompt)
                     {
                         GUILayout.BeginHorizontal();
+                        if (Settings.showInLobbyMenuFriendship.Value)
+                        {
+                            if (SteamFriends.GetFriendRelationship(memberId) == EFriendRelationship.k_EFriendRelationshipFriend)
+                                GUILayout.Box("F");
+                            else
+                            {
+                                GUILayout.Box(" ");
+                            }
+                        }
                         if (SteamMatchmaking.GetLobbyMemberData(ActualLobbyID, memberId, "loaded") == "yes")
                         {
                             string teamColorString;

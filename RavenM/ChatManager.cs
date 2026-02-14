@@ -213,7 +213,12 @@ namespace RavenM
             if (team == clientTeam && userId != SteamId.m_SteamID) nameHeadColorString = "green";
             else if (isUserRealEnemyTeam) nameHeadColorString = "red";
 
-            string nameHeadProcessed = userId == HASH_USER_NULL ? "" : $"<color={nameHeadColorString}>" + SteamFriends.GetFriendPersonaName(new CSteamID(userId)).Replace("\n", "") + (teamOnly ? "|team" : "") + "</color>";
+            var steamName = SteamFriends.GetFriendPersonaName(new CSteamID(userId)).Replace("\n", "");
+            string nameHeadProcessed = userId == HASH_USER_NULL ? "" 
+                : $"<color={nameHeadColorString}>"
+                + (steamName.Length > 25 && Settings.chatUsernameLessLength.Value ? steamName.Substring(0, 20) : steamName).Replace("\n", "")
+                + (teamOnly ? "|team" : "")
+                + "</color>";
 
             FinalAppendToChatLink(nameHeadProcessed, message, colorString);
         }
