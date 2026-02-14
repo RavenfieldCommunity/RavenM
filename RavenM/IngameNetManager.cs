@@ -1270,7 +1270,8 @@ namespace RavenM
                         break;
 
                     case ESteamNetworkingConnectionState.k_ESteamNetworkingConnectionState_ClosedByPeer:
-                        Plugin.logger.LogInfo($"Connection closed by peer for vaild hSock.");
+                        Plugin.logger.LogInfo($"Connection closed by peer for vaild hSock, return to mainmenu.");
+                        GameManager.ReturnToMenu();
                         break;
                     case ESteamNetworkingConnectionState.k_ESteamNetworkingConnectionState_ProblemDetectedLocally:
                         Plugin.logger.LogInfo($"Killing connection from {info.m_identityRemote.GetSteamID()} for vaild hSock.");
@@ -1347,9 +1348,11 @@ namespace RavenM
 
                                                 if ((actor_packet.Flags & (int)ActorStateFlags.AiControlled) == 0)
                                                 {
+                                                    /*
                                                     var enterMsg = $"{actor_packet.Name} has entered the map.";
 
                                                     ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, enterMsg);
+                                                    */
                                                     /*
                                                     using MemoryStream memoryStream = new MemoryStream();
                                                     var chatPacket = new ChatPacket
