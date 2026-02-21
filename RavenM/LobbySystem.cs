@@ -194,6 +194,13 @@ namespace RavenM
                     && !WeaponManager.instance.allWeapons.Contains(triggerEquipWeapon.weaponEntry))
                 {
                     var entry = triggerEquipWeapon.weaponEntry;
+
+                    // waow isNull check from ravenmcn
+                    if (string.IsNullOrEmpty(entry.name))
+                    {
+                        Plugin.logger.LogDebug($"Detected map weapon with null name: {entry.name}, skipped.");
+                        continue;
+                    }
                     Plugin.logger.LogDebug($"Detected map weapon with name: {entry.name}, and from map: {map.metaData.displayName}.");
                     IngameNetManager.instance.MapWeapons.Add(entry);
                 }
@@ -1232,8 +1239,20 @@ namespace RavenM
                             continue;
 
                         string[] weaponInfo = weapon_str.Split('#');
+
+                        // isNull check waow from ravenmcn
+                        if (weaponInfo.Length < 2)
+                        {
+                            Plugin.logger.LogError($"Invaild weapon info: {weapon_str}");
+                            continue;
+                        }
                         int hash = int.Parse(weaponInfo[1]);
                         var weapon = NetActorController.GetWeaponEntryByHash(hash);
+                        if (weapon == null)
+                        {
+                            Plugin.logger.LogError($"null weapon: {weapon_str}");
+                            continue;
+                        }
                         teamInfo.AddWeaponEntry(weapon, (RarityTier)int.Parse(weaponInfo[0]));
                     }
                     currentWeaponList[i] = SteamMatchmaking.GetLobbyData(ActualLobbyID, i + "weapons");
