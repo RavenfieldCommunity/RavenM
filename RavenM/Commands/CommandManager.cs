@@ -397,6 +397,31 @@ namespace RavenM.Commands
             }
             );
             Commands.Add(new Command(
+                _name: "forcechatonly",
+                _global: false,
+                _reqArgs: null,
+                _hostOnly: false,
+                scripted: true,
+                allowInLobby: true,
+                allowInGame: false,
+                helpMessage: "Check lobby status (debug only)",
+                syntaxMessage: "/forcechatonly")
+            {
+                Action = (string originalStringTrimed, bool isLocal) =>
+                {
+                    if (Settings.debugMode.Value)
+                    {
+                        ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, "Chat only exited by debug");
+                        LobbySystem.instance.isChatOnlyLobby = false;
+                    }
+                    else
+                    {
+                        ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, "This command is debug only", ChatManager.HASH_COLOR_RED);
+                    }
+                }
+            }
+            );
+            Commands.Add(new Command(
                 _name: "clear",
                 _global: false,
                 _reqArgs: null,

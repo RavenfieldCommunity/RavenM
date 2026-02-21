@@ -38,7 +38,7 @@ namespace RavenM
         {
             if (LobbySystem.instance.InLobby && !LobbySystem.instance.IsLobbyOwner && !LobbySystem.instance.ReadyToPlay)
             {
-                LobbySystem.instance.NotificationText = "Please wait for host to start game...";
+                LobbySystem.instance.NotificationText = LobbySystem.instance.isChatOnlyLobby ? "You are in chat only mode now, use `/chatonly` to refresh" : "Please wait for host to start game...";
                 return false;
             }
             LobbySystem.instance.NotificationText = "";
@@ -284,7 +284,7 @@ namespace RavenM
     {
         static bool Prefix(int index)
         {
-            if (!LobbySystem.instance.InLobby)
+            if (LobbySystem.instance == null || !LobbySystem.instance.InLobby)
             {
                 Plugin.logger.LogDebug("Non-lobby state, skip!");
                 return true;
@@ -747,7 +747,7 @@ namespace RavenM
             LobbyDataReady = true;
             ActualLobbyID = new CSteamID(pCallback.m_ulSteamIDLobby);
 
-            ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, $"Welcome to the lobby! Press {ChatManager.instance.GlobalChatKeybind} or {ChatManager.instance.TeamChatKeybind} to chat.");
+            ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, $"Lobby joined! Press {ChatManager.instance.GlobalChatKeybind} or {ChatManager.instance.TeamChatKeybind} to chat.");
             ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, "Use `/help` for availdable commands.");
             ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, $"");
 
@@ -1464,11 +1464,9 @@ namespace RavenM
                 GUILayout.Space(7f);
 
                 GUILayout.BeginHorizontal();
-                GUILayout.FlexibleSpace();
                 GUILayout.Label(NotificationText);
                 GUILayout.FlexibleSpace();
                 GUILayout.EndHorizontal();
-
                 GUILayout.Space(15f);
 
                 GUILayout.BeginHorizontal();
@@ -1620,6 +1618,8 @@ namespace RavenM
                         InLobby = true;
                         IsLobbyOwner = true;
                         LobbyDataReady = false;
+
+                        ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, "Waiting Steam... If you are stuck in here for a long time, use `/forceback` to cancel");
                     }
 
                     if (GUILayout.Button("BACK"))
