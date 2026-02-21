@@ -385,18 +385,25 @@ namespace RavenM
     {
         static bool Prefix(ModManager __instance, ref List<ModInformation> __result)
         {
-            if (LobbySystem.instance.LoadedServerMods && LobbySystem.instance.ServerMods.Count > 0)
+            if (!GameManager.IsConnectedToSteam())
             {
-                __result = new List<ModInformation>();
-                foreach (var mod in __instance.mods)
-                {
-                    if (LobbySystem.instance.ServerMods.Contains(mod.workshopItemId))
-                    {
-                        __result.Add(mod);
-                    }
-                }
-                return false;
+                Plugin.logger.LogWarning("Steam isnt running, unloading self");
+                InitMessageGUI.overwrittenStringToShow = "RavenM unloaded as Steam is not running.";
+                Plugin.instance.UnloadSelf();
+                return true;
             }
+            if (LobbySystem.instance.LoadedServerMods && LobbySystem.instance.ServerMods.Count > 0)
+                {
+                    __result = new List<ModInformation>();
+                    foreach (var mod in __instance.mods)
+                    {
+                        if (LobbySystem.instance.ServerMods.Contains(mod.workshopItemId))
+                        {
+                            __result.Add(mod);
+                        }
+                    }
+                    return false;
+                }
 
             return true;
         }

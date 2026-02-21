@@ -51,6 +51,10 @@ namespace RavenM
 
         public static Plugin instance = null;
 
+        public Harmony harmonyInstance = null;
+
+        public List<GameObject> coreComponentInstances = new List<GameObject>();
+
         public static BepInEx.Logging.ManualLogSource logger = null;
         public static ConfigFile config = null;
 
@@ -120,7 +124,7 @@ namespace RavenM
                     Logger.LogWarning($"Plugin {MyPluginInfo.PLUGIN_GUID} is canceled to load!");
                     InitLoadMessage();
                     InitMessageGUI.overwrittenStringToShow = "RavenM unloaded.";
-                    Destroy(this);
+                    return;
                 }
                 if (args[i] == "+connect_lobby")
                 {
@@ -169,10 +173,10 @@ namespace RavenM
                 }
                 customBuildInMutators = "NOT_REAL";
             }
-            var harmony = new Harmony("patch.ravenm");
+            harmonyInstance = new Harmony("patch.ravenm");
             try
             {
-                harmony.PatchAll(Assembly.GetAssembly(this.GetType()));
+                harmonyInstance.PatchAll(Assembly.GetAssembly(this.GetType()));
             }
             catch (Exception e)
             {
@@ -256,18 +260,22 @@ namespace RavenM
                 FirstSteamworksInit = true;
 
                 var lobbyObject = new GameObject();
+                coreComponentInstances.Add(lobbyObject);
                 lobbyObject.AddComponent<LobbySystem>();
                 DontDestroyOnLoad(lobbyObject);
 
                 var chatObject = new GameObject();
+                coreComponentInstances.Add(chatObject);
                 chatObject.AddComponent<ChatManager>();
                 DontDestroyOnLoad(chatObject);
 
                 var netObject = new GameObject();
+                coreComponentInstances.Add(netObject);
                 netObject.AddComponent<IngameNetManager>();
                 DontDestroyOnLoad(netObject);
 
                 var discordObject = new GameObject();
+                coreComponentInstances.Add(discordObject);
                 discordObject.AddComponent<DiscordIntegration>();
                 DontDestroyOnLoad(discordObject);
                 // Repush settings 
@@ -283,6 +291,15 @@ namespace RavenM
         void OnDestory()
         {
             instance = null;
+        }
+
+        public void UnloadSelf()
+        {
+            foreach (var go in coreComponentInstances)
+            {
+                Destroy(go);
+            }
+            harmonyInstance.UnpatchSelf();
         }
         
         void OnApplicationQuit()
