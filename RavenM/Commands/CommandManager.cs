@@ -166,7 +166,7 @@ namespace RavenM.Commands
                         if (targetIsClient)
                         {
                             LobbySystem.instance.NotificationText = "You were banned from the lobby!";
-                            if (GameManager.IsIngame())
+                            if (GameManager.IsIngame(out _))
                                 IngameMenuUi.instance.Menu();  // Unless this method, others will be blocked by RavenM itself lol
                             else
                                 SteamMatchmaking.LeaveLobby(LobbySystem.instance.ActualLobbyID);

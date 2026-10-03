@@ -347,7 +347,7 @@ namespace RavenM
                 return;
             }
 
-            if (!(cmd.AllowInLobby && !GameManager.IsIngame()) && !(cmd.AllowInGame && GameManager.IsIngame()))
+            if (!(cmd.AllowInLobby && !GameManager.IsIngame(out _)) && !(cmd.AllowInGame && GameManager.IsIngame(out _)))
             {
                 AppendToChatLink(ChatManager.HASH_USER_NULL, cmd.AllowInGame ? $"Command `{targetCommandName}` is disabled when not in gaming" : $"Command `{targetCommandName}` is disabled in gaming", HASH_COLOR_RED);
                 return;

@@ -1004,7 +1004,7 @@ namespace RavenM
 
         private void Update()
         {
-            if (GameManager.instance == null || GameManager.IsIngame() || GameManager.IsInLoadingScreen())
+            if (GameManager.instance == null || GameManager.IsIngame(out _) || GameManager.IsInLoadingScreen())
                 return;
 
             if (Input.GetKeyDown(KeyCode.M) && !InLobby)
@@ -1434,7 +1434,7 @@ namespace RavenM
 
         private void OnGUI()
         {
-            if (GameManager.instance == null || GameManager.IsIngame() && (Settings.showInLobbyMenuAtPauseMenu.Value ? (IngameMenuUi.instance != null && !IngameMenuUi.instance.canvas.enabled) : (LoadoutUi.instance != null && LoadoutUi.HasBeenClosed())) )
+            if (GameManager.instance == null || GameManager.IsIngame(out _) && (Settings.showInLobbyMenuAtPauseMenu.Value ? (IngameMenuUi.instance != null && !IngameMenuUi.instance.canvas.enabled) : (LoadoutUi.instance != null && LoadoutUi.HasBeenClosed())) )
                 return;
 
             if (MainMenu.instance != null)
@@ -1983,7 +1983,7 @@ namespace RavenM
                     string totalMods = SteamMatchmaking.GetLobbyData(ActualLobbyID, "mods").Split(',').Length.ToString();
 
                     string readyColor = "";
-                    if (GameManager.IsIngame())
+                    if (GameManager.IsIngame(out _))
                         if (ActorManager.instance.actors != null)
                             foreach (Actor actor in ActorManager.instance.actors)
                             {
