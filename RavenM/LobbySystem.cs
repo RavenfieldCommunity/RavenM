@@ -30,7 +30,7 @@ namespace RavenM
                 __instance.noWorkshopMods = true;
         }
     }
-    
+
     [HarmonyPatch(typeof(GameManager), nameof(GameManager.StartLevel))]
     public class OnStartPatch
     {
@@ -51,7 +51,8 @@ namespace RavenM
                 {
                     if (SteamMatchmaking.GetLobbyMemberData(LobbySystem.instance.ActualLobbyID, memberId, "loaded") != "yes")
                     {
-                        if (!LobbySystem.instance.HasCommittedToStart) {
+                        if (!LobbySystem.instance.HasCommittedToStart)
+                        {
                             LobbySystem.instance.IntentionToStart = true;
                             return false;
                         }
@@ -66,7 +67,7 @@ namespace RavenM
 
                 LobbySystem.instance.SetLobbyDataDedup("started", "yes");
             }
-            
+
             if (GameManager.instance.gameModeParameters != null && GameManager.instance.gameModeParameters.playerTeam == -1)
             {
                 LobbySystem.instance.EnableWallhack = true;
@@ -215,7 +216,7 @@ namespace RavenM
             if (LobbySystem.instance.IsLobbyOwner)
                 IngameNetManager.instance.StartAsServer();
             else
-                IngameNetManager.instance.StartAsClient(LobbySystem.instance.OwnerID); 
+                IngameNetManager.instance.StartAsClient(LobbySystem.instance.OwnerID);
 
             SteamMatchmaking.SetLobbyMemberData(LobbySystem.instance.ActualLobbyID, "ready", "yes");
         }
@@ -233,12 +234,14 @@ namespace RavenM
         }
     }
 
-    [HarmonyPatch(typeof(InstantActionConfigMenu), "SetGameMode")]   
+    [HarmonyPatch(typeof(InstantActionConfigMenu), "SetGameMode")]
     public class SetGameModePatch
     {
         static void Postfix(GameObject prefab)
         {
-            LobbySystem.instance.currentGameMode = prefab.GetComponent<GameModeBase>().gameModeType;
+            var mode = prefab.GetComponent<GameModeBase>();
+            LobbySystem.instance.currentGameMode = LobbySystem.instance.CheckGameMode(mode);
+            LobbySystem.instance.currentGameModeName = mode.gameModeName;
         }
     }
 
@@ -292,7 +295,7 @@ namespace RavenM
             else if (LobbySystem.instance.IsLobbyOwner)
                 return true;
 
-            if (index == MainMenu.PAGE_INSTANT_ACTION & GameObject.FindObjectOfType<MapPicker>(includeInactive:true).gameObject.activeInHierarchy)
+            if (index == MainMenu.PAGE_INSTANT_ACTION & GameObject.FindObjectOfType<MapPicker>(includeInactive: true).gameObject.activeInHierarchy)
                 return true;
             if (index == MainMenu.PAGE_TEAM_CONFIG & LobbySystem.instance.isChangingList)
                 return false;
@@ -317,7 +320,7 @@ namespace RavenM
 
             // Sort mutators
             ModManager.instance.loadedMutators.Sort((x, y) => x.name.CompareTo(y.name));
-            
+
             // Map picker reload, can you believe the ravens didnt it after mod reloading???
             // though it maybe fixed after i raised the issue
             // and i hate map picker
@@ -326,7 +329,7 @@ namespace RavenM
             mapPickerTraversed.Method("ClearAllEntries");
             mapPickerTraversed.Method("SetBuiltInEntries");
             mapPickerTraversed.Method("SetCustomEntries");
-            
+
 
             if (!LobbySystem.instance.InLobby || !LobbySystem.instance.LobbyDataReady || LobbySystem.instance.IsLobbyOwner || LobbySystem.instance.ModsToDownload.Count > 0)
                 return;
@@ -393,20 +396,32 @@ namespace RavenM
                 return true;
             }
             if (LobbySystem.instance.LoadedServerMods && LobbySystem.instance.ServerMods.Count > 0)
+            {
+                __result = new List<ModInformation>();
+                foreach (var mod in __instance.mods)
                 {
-                    __result = new List<ModInformation>();
-                    foreach (var mod in __instance.mods)
+                    if (LobbySystem.instance.ServerMods.Contains(mod.workshopItemId))
                     {
-                        if (LobbySystem.instance.ServerMods.Contains(mod.workshopItemId))
-                        {
-                            __result.Add(mod);
-                        }
+                        __result.Add(mod);
                     }
-                    return false;
                 }
+                return false;
+            }
 
             return true;
         }
+    }
+
+    public enum BuiltInGameMode
+    {
+        PointMatch,
+        Domination,
+        Skirmish,
+        SpecOps,
+        Haunted,
+        Battle,
+        Test,
+        None
     }
 
     public class LobbySystem : MonoBehaviour
@@ -469,7 +484,8 @@ namespace RavenM
 
         public bool RequestModReload = false;
 
-        public GameModeType currentGameMode = GameModeType.Battalion;
+        public BuiltInGameMode currentGameMode = BuiltInGameMode.Battle;
+        public string currentGameModeName = "";
 
         // used for mod config list to avoid set up game config too many times, list index is team index
         public List<Dictionary<VehicleSpawner.VehicleSpawnType, string>> currentVehicleList;
@@ -517,7 +533,7 @@ namespace RavenM
         public bool IntentionToStart = false;
 
         public bool HasCommittedToStart = false;
-       
+
         /// <summary>
         /// Control to hide that menu in lobby
         /// </summary>
@@ -559,21 +575,44 @@ namespace RavenM
 
             CleanModConfigList();
         }
-        
+
         public void OpenStorageDirectory()
         {
-           if (!Directory.Exists(Plugin.storageDirectoryPath)) 
-               Directory.CreateDirectory(Plugin.storageDirectoryPath);
-           System.Diagnostics.Process.Start(Plugin.storageDirectoryPath);
+            if (!Directory.Exists(Plugin.storageDirectoryPath))
+                Directory.CreateDirectory(Plugin.storageDirectoryPath);
+            System.Diagnostics.Process.Start(Plugin.storageDirectoryPath);
         }
-        
+
+        public BuiltInGameMode CheckGameMode(GameModeBase gameModeBase)
+        {
+            switch (gameModeBase.gameModeName)
+            {
+                case "POINT MATCH":
+                    return BuiltInGameMode.PointMatch;
+                case "DOMINATION":
+                    return BuiltInGameMode.Domination;
+                case "SKIRMISH":
+                    return BuiltInGameMode.Skirmish;
+                case "BATTLE":
+                    return BuiltInGameMode.Battle;
+                case "SPEC OPS":
+                    return BuiltInGameMode.SpecOps;
+                case "HAUNTED":
+                    return BuiltInGameMode.Haunted;
+                case "TEST":
+                    return BuiltInGameMode.Test;
+                default:
+                    return BuiltInGameMode.None;
+            }
+        }
+
         public void SaveAndOpenErrorLogFile()
         {
-           var directory = Plugin.storageDirectoryPath + "/ErrorLog/";
-           if (!Directory.Exists(directory))
-               Directory.CreateDirectory(directory);
-           File.Copy(Application.consoleLogPath, directory + $"{DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss")}.log.txt");
-           System.Diagnostics.Process.Start(directory);
+            var directory = Plugin.storageDirectoryPath + "/ErrorLog/";
+            if (!Directory.Exists(directory))
+                Directory.CreateDirectory(directory);
+            File.Copy(Application.consoleLogPath, directory + $"{DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss")}.log.txt");
+            System.Diagnostics.Process.Start(directory);
         }
 
         public void SaveLobbyInfo()
@@ -934,7 +973,7 @@ namespace RavenM
         {
             return SteamMatchmaking.GetLobbyMemberData(ActualLobbyID, memberId, key);
         }
-        
+
         public string GetLobbyData(string key)
         {
             return SteamMatchmaking.GetLobbyData(ActualLobbyID, key);
@@ -980,12 +1019,12 @@ namespace RavenM
             //No initial bots! Many errors otherwise!
             instantActionConfigMenu.Field("botAmountEagleIF").GetValue<TMP_InputField>().text = 0.ToString();
             instantActionConfigMenu.Field("botAmountRavenIF").GetValue<TMP_InputField>().text = 0.ToString();
-            
+
             Plugin.logger.LogInfo("Check game parameters");
             // TO DO: further check for some modded game mode
             // can you fxxkin believe when you restart and back to here from ingame, the game mode is wrong one, the default value??? so the non-host client will stick into wrong mode. of course this is also because the game mode is set only when its changed
-            instantActionConfigMenu.Method("SetGameMode", GameManager.GetGameModePrefab(LobbySystem.instance.currentGameMode)).GetValue();
-            
+            instantActionConfigMenu.Method("SetGameMode", GameManager.GetBuiltInGameModeByName(LobbySystem.instance.currentGameModeName)).GetValue();
+
             instantActionConfigMenu.Method("StartGame").GetValue();
         }
 
@@ -1064,7 +1103,7 @@ namespace RavenM
 
             if (IsLobbyOwner)
             {
-                SetLobbyDataDedup("gameMode", ((int)this.currentGameMode).ToString());
+                SetLobbyDataDedup("gameMode", currentGameModeName);
                 SetLobbyDataDedup("nightMode", nightToggle.isOn.ToString());
                 SetLobbyDataDedup("botAmountEagle", instantActionConfigMenu.Field("botAmountEagleIF").GetValue<TMP_InputField>().text);
                 SetLobbyDataDedup("botAmountRaven", instantActionConfigMenu.Field("botAmountRavenIF").GetValue<TMP_InputField>().text);
@@ -1074,7 +1113,7 @@ namespace RavenM
                 SetLobbyDataDedup("isOfficalMap", mapEntryData.IsOfficial().ToString());
 
                 // For SpecOps.
-                if (this.currentGameMode == GameModeType.SpecOps)
+                if (this.currentGameMode == BuiltInGameMode.SpecOps)
                 {
                     SetLobbyDataDedup("team", playerTeamDD.value.ToString());
                 }
@@ -1097,18 +1136,18 @@ namespace RavenM
                         var type = vehicleDict.Key;
                         var slotInfo = vehicleDict.Value;
 
-                        foreach (var prefab in slotInfo.AllPrefabs())
+                        foreach (var vehicleInfo in slotInfo.All())
                         {
                             bool isDefault = true; // Default vehicle.
-                            int idx = Array.IndexOf(ActorManager.instance.defaultVehiclePrefabs, prefab);
+                            int idx = Array.IndexOf(ActorManager.instance.defaultVehiclePrefabs, vehicleInfo);
 
                             if (idx == -1)
                             {
                                 isDefault = false;
-                                idx = sortedModdedVehicles.IndexOf(prefab);
+                                idx = sortedModdedVehicles.IndexOf(vehicleInfo.prefab);
                             }
 
-                            if (slotInfo.IsAvailable(prefab, out var tier))
+                            if (slotInfo.IsAvailable(vehicleInfo, out var tier))
                                 vehicles.Add($"{isDefault}#{(int)tier}#{idx}");
                         }
 
@@ -1121,20 +1160,20 @@ namespace RavenM
                         var type = turretPrefab.Key;
                         var slotInfo = turretPrefab.Value;
 
-                        foreach (var prefab in slotInfo.AllPrefabs())
+                        foreach (var vInfo in slotInfo.All())
                         {
                             bool isDefault = true; // Default turret.
-                            int idx = Array.IndexOf(ActorManager.instance.defaultTurretPrefabs, prefab);
+                            int idx = Array.IndexOf(ActorManager.instance.defaultTurretPrefabs, vInfo);
 
                             if (idx == -1)
                             {
                                 isDefault = false;
                                 var moddedTurrets = ModManager.AllTurretPrefabs().ToList();
                                 moddedTurrets.Sort((x, y) => x.name.CompareTo(y.name));
-                                idx = moddedTurrets.IndexOf(prefab);
+                                idx = moddedTurrets.IndexOf(vInfo.prefab);
                             }
 
-                            if (slotInfo.IsAvailable(prefab, out var tier))
+                            if (slotInfo.IsAvailable(vInfo, out var tier))
                                 turrets.Add($"{isDefault}#{(int)tier}#{idx}");
                         }
 
@@ -1143,13 +1182,13 @@ namespace RavenM
 
                     }
                 }
-                
-                for (int i = 0; i < 2; i++)  
+
+                for (int i = 0; i < 2; i++)
                 {
                     var teamInfo = GameManager.instance.gameInfo.team[i];
-                    
+
                     SetLobbyDataDedup(i + "skin", teamInfo.skin == null ? "Default" : teamInfo.skin.name);
-                    SetLobbyDataDedup(i + "color", teamInfo.teamColor == null ? ColorUtility.ToHtmlStringRGB(teamInfo.teamColor) : (i == 0 ? "0000FF" : "FF0000") );
+                    SetLobbyDataDedup(i + "color", teamInfo.teamColor == null ? ColorUtility.ToHtmlStringRGB(teamInfo.teamColor) : (i == 0 ? "0000FF" : "FF0000"));
                     SetLobbyDataDedup(i + "name", teamInfo.teamName == null ? (i == 0 ? "EAGLE" : "RAVEN") : teamInfo.teamName);
                 }
 
@@ -1168,7 +1207,7 @@ namespace RavenM
                     enabledMutators.Add(id);
 
                     var serializedMutators = new JSONArray();
-                    foreach (var item in mutator.configuration.GetAllFields())
+                    var a = ModManager.instance.mutatorConfiguration[mutator];
                     {
                         JSONNode node = new JSONString(item.SerializeValue());
                         serializedMutators.Add(node);
@@ -1180,9 +1219,9 @@ namespace RavenM
             }
             else if (SteamMatchmaking.GetLobbyMemberData(ActualLobbyID, SteamUser.GetSteamID(), "loaded") == "yes")
             {
-                var modeType = (GameModeType)int.Parse( SteamMatchmaking.GetLobbyData(ActualLobbyID, "gameMode") ); 
-                if ( modeType != currentGameMode )  // FIXME: the game mode should be chosen after the map is selected?
-                    instantActionConfigMenu.Method("SetGameMode", GameManager.GetGameModePrefab(modeType)).GetValue();
+                var modeType = SteamMatchmaking.GetLobbyData(ActualLobbyID, "gameMode");
+                if (modeType != currentGameModeName)  // FIXME: the game mode should be chosen after the map is selected?
+                    instantActionConfigMenu.Method("SetGameMode", GameManager.GetBuiltInGameModeByName(modeType)).GetValue();
                 var isNightEnable = bool.Parse(SteamMatchmaking.GetLobbyData(ActualLobbyID, "nightMode"));
                 InstantActionConfigMenu.instance.ToggleNight(isNightEnable);
                 nightToggle.isOn = isNightEnable;
@@ -1193,17 +1232,17 @@ namespace RavenM
                 instantActionConfigMenu.Field("gameLengthDD").GetValue<TMP_Dropdown>().value = int.Parse(SteamMatchmaking.GetLobbyData(ActualLobbyID, "gameLength"));
 
                 // For SpecOps.
-                if (modeType == GameModeType.SpecOps)
+                if (modeType == "SPEC OPS")
                 {
                     playerTeamDD.value = int.Parse(SteamMatchmaking.GetLobbyData(ActualLobbyID, "team"));
                 }
 
                 if (!ModManager.instance.contentHasFinishedLoading)
                     return;
-                
+
                 bool doubleCheck = false; //fix for entering into the wrong map with midgame joining, if is `true` then the check is pass
                 bool isTargetOfficialMap = bool.Parse(SteamMatchmaking.GetLobbyData(ActualLobbyID, "isOfficalMap"));
-                string targetMapName = SteamMatchmaking.GetLobbyData(ActualLobbyID, "map"); 
+                string targetMapName = SteamMatchmaking.GetLobbyData(ActualLobbyID, "map");
                 if (mapEntryData.GetName() != targetMapName | isTargetOfficialMap != mapEntryData.IsOfficial())
                 {
                     var mapPicker = FindObjectOfType<MapPicker>(includeInactive: true);
@@ -1212,7 +1251,7 @@ namespace RavenM
                     isChangingList = true;
                     foreach (var entry in Traverse.Create(FindObjectOfType<MapPicker>(includeInactive: true)).Field("entryPanels").GetValue<List<PickerEntryObject>>())
                     {
-                        
+
                         if (entry.entryData.GetName() == targetMapName && isTargetOfficialMap == entry.entryData.IsOfficial())
                         {
                             if (doubleCheck)
@@ -1221,7 +1260,7 @@ namespace RavenM
                             {
                                 entry.Select();
                                 doubleCheck = true; //just to be safe
-                            } 
+                            }
                         }
                     }
                     isChangingList = false;
@@ -1283,7 +1322,7 @@ namespace RavenM
                                 continue;
                             string[] vehicleInfo = vehicle_str.Split('#');
                             if (vehicleInfo.Count() < 3)
-                            { 
+                            {
                                 Plugin.logger.LogInfo(vehicle_str);
                                 continue;
                             }
@@ -1298,7 +1337,7 @@ namespace RavenM
                             {
                                 prefab = sortedModdedVehicles[idx];
                             }
-                            teamInfo.AddVehicle(type, (RarityTier)int.Parse(vehicleInfo[1]), prefab);
+                            teamInfo.AddVehicle(type, (RarityTier)int.Parse(vehicleInfo[1]), VehicleInfo.GetFromPrefab(prefab));
 
                         }
                         currentVehicleList[i][type] = vehicleList;
@@ -1339,7 +1378,7 @@ namespace RavenM
                             {
                                 prefab = ModManager.AllTurretPrefabs().ToList()[idx];
                             }
-                            teamInfo.AddTurret(type, (RarityTier)int.Parse(turretInfo[1]), prefab);
+                            teamInfo.AddTurret(type, (RarityTier)int.Parse(turretInfo[1]), VehicleInfo.GetFromPrefab(prefab));
                         }
                         currentTurretList[i][type] = turretList;
                         changedTurrets = true;
@@ -1387,7 +1426,7 @@ namespace RavenM
                         for (int mutatorIndex = 0; mutatorIndex < ModManager.instance.loadedMutators.Count; mutatorIndex++)
                         {
                             var mutator = ModManager.instance.loadedMutators.ElementAt(mutatorIndex);
-    
+
                             if (id == mutatorIndex)
                             {
                                 GameManager.instance.gameInfo.activeMutators.Add(mutator);
@@ -1421,20 +1460,20 @@ namespace RavenM
 
                 if (doubleCheck == false)
                     return;
-                
+
                 // manually check by player to start game is better I think
                 // no 
                 if (SteamMatchmaking.GetLobbyData(ActualLobbyID, "started") == "yes")
                 {
                     StartAsClient();
                 }
-                
+
             }
         }
 
         private void OnGUI()
         {
-            if (GameManager.instance == null || GameManager.IsIngame(out _) && (Settings.showInLobbyMenuAtPauseMenu.Value ? (IngameMenuUi.instance != null && !IngameMenuUi.instance.canvas.enabled) : (LoadoutUi.instance != null && LoadoutUi.HasBeenClosed())) )
+            if (GameManager.instance == null || GameManager.IsIngame(out _) && (Settings.showInLobbyMenuAtPauseMenu.Value ? (IngameMenuUi.instance != null && !IngameMenuUi.instance.canvas.enabled) : (LoadoutUi.instance != null && LoadoutUi.HasBeenClosed())))
                 return;
 
             if (MainMenu.instance != null)
@@ -1444,7 +1483,7 @@ namespace RavenM
                     return;
                 else
                 {
-                    if (GUI.Button(new Rect(Screen.width/2-75, Screen.height-25, 150, 30f), "Multiplayer") & !InLobby)
+                    if (GUI.Button(new Rect(Screen.width / 2 - 75, Screen.height - 25, 150, 30f), "Multiplayer") & !InLobby)
                     {
                         if (GUIStack.Count == 0)
                             GUIStack.Push(GUIStackState.Main);
@@ -1569,12 +1608,12 @@ namespace RavenM
                         if (!hasRequestLobbyListBefore)
                             hasRequestLobbyListBefore = true;
                     }
-                    
+
                     GUILayout.Space(5f);
-                    
+
                     if (Plugin.instance.hasDetectedException && GUILayout.Button("Save error log"))
                         SaveAndOpenErrorLogFile();
-                    
+
                     if (GUILayout.Button(shouldShowMoreOptions ? "LESS" : "MORE"))
                         shouldShowMoreOptions = !shouldShowMoreOptions;
                     if (shouldShowMoreOptions)
@@ -1849,7 +1888,7 @@ namespace RavenM
                     GUILayout.Label($"BOTS: {SteamMatchmaking.GetLobbyData(LobbyView, "botAmountEagle")} / {SteamMatchmaking.GetLobbyData(LobbyView, "botAmountRaven")}");
 
                     var map = SteamMatchmaking.GetLobbyData(LobbyView, "map");
-                    map =  SteamMatchmaking.GetLobbyData(LobbyView, "isOfficialMap") == HASH_LOBBYDATA_TRUE ?  "Default" : map ;
+                    map = SteamMatchmaking.GetLobbyData(LobbyView, "isOfficialMap") == HASH_LOBBYDATA_TRUE ? "Default" : map;
                     GUILayout.Label($"MAP: {map}");
 
                     var status = SteamMatchmaking.GetLobbyData(LobbyView, "started") == "yes" ? "<color=green>In-game</color>" : "Configuring";
@@ -1953,9 +1992,9 @@ namespace RavenM
                 {
                     if (Settings.debugMode.Value)
                     {
-                        if(GUILayout.Button("Force back"))
+                        if (GUILayout.Button("Force back"))
                             ChatManager.instance.AppendToChatLink(ChatManager.HASH_USER_NULL, "/forceback");
-                        if(GUILayout.Button("Send test packet"))
+                        if (GUILayout.Button("Send test packet"))
                             IngameNetManager.instance.SendInteralMessagePacket("Test");
                     }
                     if (Plugin.instance.hasDetectedException && GUILayout.Button("Save error log"))
@@ -2045,7 +2084,7 @@ namespace RavenM
                             SelectedMemberPrompt = CSteamID.Nil;
                     }
                 }
-                CancelShowInLobbyMenu:
+            CancelShowInLobbyMenu:
                 GUILayout.EndScrollView();
 
             CancelShowingInLobbbyDetail:
@@ -2115,7 +2154,7 @@ namespace RavenM
                     GUILayout.EndVertical();
                     GUILayout.Space((float)(punBytesTotal - punBytesDownloaded) / punBytesTotal * 150f);
                     GUILayout.EndHorizontal();
-                }        
+                }
 
                 GUILayout.EndVertical();
                 GUILayout.EndArea();
